@@ -27,7 +27,7 @@ This repository currently holds the product planning and stack-selection artifac
 - Starter: 10x Astro Starter
 - Language family: JavaScript
 - Package manager: npm
-- Deployment target: Cloudflare Pages
+- Deployment target: Cloudflare Workers
 - CI provider: GitHub Actions
 
 ## Repository Layout
