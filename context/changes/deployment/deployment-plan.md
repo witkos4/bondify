@@ -4,10 +4,21 @@
 
 The first deployment should target **Cloudflare Workers**, not Cloudflare Pages. That follows from the current repository state: `astro.config.mjs` uses `@astrojs/cloudflare`, `wrangler.jsonc` defines a Worker, and the repo is already prepared for deployment through `wrangler`.
 The chosen model is: **first deploy manually**, publish to **`*.workers.dev`**, and have the eventual **auto-deploy after pushes to `master`** handled by **Cloudflare**, not GitHub Actions.
+The required external prerequisites are already in place: Wrangler CLI is installed, the Cloudflare account is available, the Supabase Cloud project exists, and the GitHub repository is configured.
 
 ## Prerequisites
 
+Current status for this rollout:
+
+- Wrangler CLI setup: complete
+- Cloudflare account and access: complete
+- Supabase cloud project: complete
+- GitHub repository: complete
+- Production secret ownership: complete
+
 ### 1. Wrangler CLI setup
+
+Status: complete.
 
 - `wrangler` must be available through the repository toolchain and usable from this repo via `npx wrangler ...`.
 - The operator performing the first deploy must be able to authenticate successfully with `npx wrangler login`.
@@ -25,6 +36,8 @@ The chosen model is: **first deploy manually**, publish to **`*.workers.dev`**, 
 - If the local machine cannot complete the full `build -> login -> deploy` flow, it is not ready to perform the first production rollout.
 
 ### 2. Cloudflare account and access
+
+Status: complete.
 
 - A Cloudflare account must already exist and be the account that will own the Bondify production Worker.
 - The operator must have sufficient permissions to:
@@ -44,6 +57,8 @@ The chosen model is: **first deploy manually**, publish to **`*.workers.dev`**, 
 - Custom domains, Access policies, and other Cloudflare platform features are optional at this stage and should not block the first production release.
 
 ### 3. Supabase cloud project
+
+Status: complete.
 
 - Production must use a real hosted Supabase project, not local Supabase started through Docker.
 - This cloud Supabase project is the load-bearing production dependency for:
@@ -67,6 +82,8 @@ The chosen model is: **first deploy manually**, publish to **`*.workers.dev`**, 
 
 ### 4. Production secret ownership
 
+Status: complete.
+
 - The team must explicitly know who is responsible for:
   - writing Cloudflare Worker secrets
   - rotating those secrets later
@@ -86,6 +103,15 @@ The chosen model is: **first deploy manually**, publish to **`*.workers.dev`**, 
 
 ## Key Changes and Decisions
 
+Execution status:
+
+- Prerequisites: complete
+- Phase 0 - standardize deployment source of truth: complete
+- Phase 1 - minimal production configuration: complete
+- Phase 2 - first manual deploy: complete
+- Phase 3 - post-deploy verification: complete
+- Phase 4 - Cloudflare-managed auto-deploy setup: in progress
+
 ### 1. Standardize the source of truth for deployment
 
 - Adopt `Cloudflare Workers` as the only supported deployment target.
@@ -94,10 +120,11 @@ The chosen model is: **first deploy manually**, publish to **`*.workers.dev`**, 
   - the build and deploy runtime is Workers
   - automatic production deployments are triggered by **Cloudflare Git integration / Workers Builds**
   - GitHub Actions remains responsible only for **CI validation** (`lint`, `build`), not releases
+- Phase 0 result: deployment documentation now treats Workers as the only target and Cloudflare as the release owner.
 
 ### 2. Minimal production configuration
 
-- Confirm the application name in `wrangler.jsonc` and decide whether to keep the starter name `10x-astro-starter` or rename it to `bondify` before the first deploy.
+- Set the application name to `bondify` in `wrangler.jsonc` before the first deploy.
 - Prepare two sets of secrets:
   - GitHub Actions: `SUPABASE_URL`, `SUPABASE_KEY` for CI builds only
   - Cloudflare Worker/Build environment: `SUPABASE_URL`, `SUPABASE_KEY` for runtime and deployments
@@ -105,6 +132,10 @@ The chosen model is: **first deploy manually**, publish to **`*.workers.dev`**, 
   - local development via `.env` / `.dev.vars`
   - production on `workers.dev`
 - Do not connect a custom domain in this deployment.
+- Phase 1 result:
+  - Worker name is standardized to `bondify`.
+  - CI secrets remain `SUPABASE_URL` and `SUPABASE_KEY` in GitHub Actions for the build step only.
+  - Runtime secrets remain `SUPABASE_URL` and `SUPABASE_KEY` in Cloudflare Workers via `wrangler secret put`.
 
 ### 3. First manual deploy
 
@@ -119,6 +150,21 @@ The chosen model is: **first deploy manually**, publish to **`*.workers.dev`**, 
   8. `npx wrangler deploy`
 - Treat the resulting `workers.dev` URL as the first public production address.
 - Do not couple the first deploy with high-risk Supabase migrations; if migrations are required, ship them as a separate explicit step with a rollback plan.
+- Local pre-deploy verification status:
+  - `npm ci`: passed
+  - `npx astro sync`: passed
+  - `npm run lint`: passed after repo formatting normalization via `npm run format`
+  - `npm run build`: passed
+  - `npx wrangler whoami`: passed for account `witkos4@gmail.com`
+  - `npx wrangler secret put SUPABASE_URL`: passed
+  - `npx wrangler secret put SUPABASE_KEY`: passed
+  - `npx wrangler deploy`: passed
+- Deployment result:
+  - public URL: `https://bondify.witkos4.workers.dev`
+  - worker name: `bondify`
+  - Cloudflare version id: `326f6c3d-8688-44a1-a8ba-163184a86b53`
+  - provisioned binding during deploy: `SESSION` KV namespace
+  - deploy warning: `workers.dev` and preview URLs are enabled by default because they are not explicitly set in `wrangler.jsonc`
 
 ### 4. Post-deploy verification
 
@@ -133,6 +179,19 @@ The chosen model is: **first deploy manually**, publish to **`*.workers.dev`**, 
   - CLI path: `npx wrangler rollback`
   - dashboard path: Workers Deployments
 - Explicitly note that **code can be rolled back, but Supabase schema/data do not roll back automatically**.
+- Phase 3 execution notes:
+  - Initial smoke test exposed a runtime configuration issue: the deployed app reported Supabase as unconfigured even though Wrangler secrets existed.
+  - Root cause: Supabase secrets were being resolved at module load time instead of dynamically at runtime.
+  - Fix applied: switched secret reads to `getSecret()` in `src/lib/supabase.ts` and `src/lib/config-status.ts`, then redeployed.
+  - Redeploy result: `https://bondify.witkos4.workers.dev` on version `fcd5b585-c00f-47e6-8a9a-6ec292df08a3`.
+- Verified smoke-test results after the fix:
+  - homepage renders without the "Supabase is not configured" banner
+  - `/auth/signin` renders without the configuration warning
+  - unauthenticated access to `/dashboard` redirects to sign-in as expected
+  - Wrangler secret inventory confirms both `SUPABASE_URL` and `SUPABASE_KEY` are present on the worker
+- Remaining manual verification for auth:
+  - sign in with a real test account and confirm session cookie creation
+  - sign out and confirm session clearing
 
 ### 5. Target state after the first deployment
 
@@ -147,6 +206,30 @@ The chosen model is: **first deploy manually**, publish to **`*.workers.dev`**, 
   - `npm run build`
 - Do not add a deploy step to the GitHub Actions workflow.
 - Document in the repo that release ownership sits with Cloudflare: build triggers, deploy history, and promotion path are managed there.
+- Phase 4 preparation completed in repo:
+  - `wrangler.jsonc` now explicitly sets `workers_dev: true`
+  - `wrangler.jsonc` now explicitly sets `preview_urls: true`
+  - deploy behavior no longer depends on Wrangler defaults for public and preview URLs
+- Remaining Cloudflare dashboard work:
+  - connect the GitHub repository to the `bondify` Worker in Cloudflare
+  - set the production branch to `master`
+  - verify that Cloudflare-managed builds receive `SUPABASE_URL` and `SUPABASE_KEY`
+  - confirm that a push to `master` creates a production deployment
+- Phase 4 dashboard checklist:
+  - open Cloudflare Dashboard -> Workers & Pages -> `bondify`
+  - go to Builds / Git integration and connect the GitHub repository
+  - choose `master` as the production branch
+  - enable preview builds for non-`master` branches if preview URLs should stay useful
+  - add `SUPABASE_URL` and `SUPABASE_KEY` in the Cloudflare-managed build/runtime environment settings
+  - confirm the Worker still targets the `bondify` project and `https://bondify.witkos4.workers.dev`
+  - trigger a test deploy with a small commit pushed to `master`
+  - verify the new deployment appears in Cloudflare deployment history
+  - open the fresh production deployment and confirm homepage and `/auth/signin` still work
+  - inspect logs with `npx wrangler tail` if the deployment or runtime behavior looks wrong
+- Phase 4 success criteria:
+  - a push to `master` creates a Cloudflare-managed production deployment
+  - GitHub Actions remains CI-only
+  - the deployed app still sees `SUPABASE_URL` and `SUPABASE_KEY`
 
 ## Public Interfaces and Configuration
 

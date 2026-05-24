@@ -36,14 +36,14 @@ hints:
 
 ### Why this stack
 
-Bondify is a web app with auth, a short three-week after-hours MVP window, and a medium initial scale, which favors a mainstream, opinionated starter that reduces assembly work. 10x Astro Starter is the vetted JavaScript default for this shape and keeps auth, database, and deployment aligned in one stack rather than making you stitch together separate choices before shipping. Cloudflare Pages is the starter's default deployment path, GitHub Actions fits the repository workflow cleanly, and auto-deploy on merge keeps the delivery loop short. Scaffolding support is first-class rather than fully verified, so the setup should be mostly smooth with occasional manual adjustments.
+Bondify is a web app with auth, a short three-week after-hours MVP window, and a medium initial scale, which favors a mainstream, opinionated starter that reduces assembly work. 10x Astro Starter is the vetted JavaScript default for this shape and keeps auth, database, and deployment aligned in one stack rather than making you stitch together separate choices before shipping. Cloudflare Workers is the selected deployment target for this repo, GitHub Actions fits the repository workflow cleanly for CI, and production deploy automation should live in Cloudflare rather than GitHub Actions. Scaffolding support is first-class rather than fully verified, so the setup should be mostly smooth with occasional manual adjustments.
 
 ## Pre-scaffold verification
 
-| Signal      | Value     | Severity | Notes |
-| ----------- | --------- | -------- | ----- |
-| npm package | not run   | n/a      | `cmd_template` starts with `git clone`, so no `create-*` npm package was derived |
-| GitHub repo | not run   | n/a      | `gh` unavailable: `/usr/bin/bash: line 1: gh: command not found` |
+| Signal      | Value   | Severity | Notes                                                                            |
+| ----------- | ------- | -------- | -------------------------------------------------------------------------------- |
+| npm package | not run | n/a      | `cmd_template` starts with `git clone`, so no `create-*` npm package was derived |
+| GitHub repo | not run | n/a      | `gh` unavailable: `/usr/bin/bash: line 1: gh: command not found`                 |
 
 ## Scaffold log
 
@@ -87,27 +87,28 @@ None.
 
 ## Hints recorded but not acted on
 
-| Hint | Value |
-| ---- | ----- |
-| bootstrapper_confidence | first-class |
-| quality_override | false |
-| path_taken | standard |
-| self_check_answers | null |
-| team_size | solo |
-| deployment_target | cloudflare-pages |
-| ci_provider | github-actions |
-| ci_default_flow | auto-deploy-on-merge |
-| has_auth | true |
-| has_payments | false |
-| has_realtime | false |
-| has_ai | false |
-| has_background_jobs | false |
+| Hint                    | Value                |
+| ----------------------- | -------------------- |
+| bootstrapper_confidence | first-class          |
+| quality_override        | false                |
+| path_taken              | standard             |
+| self_check_answers      | null                 |
+| team_size               | solo                 |
+| deployment_target       | cloudflare-pages     |
+| ci_provider             | github-actions       |
+| ci_default_flow         | auto-deploy-on-merge |
+| has_auth                | true                 |
+| has_payments            | false                |
+| has_realtime            | false                |
+| has_ai                  | false                |
+| has_background_jobs     | false                |
 
 ## Next steps
 
 Next: a future skill will set up agent context (`CLAUDE.md`, `AGENTS.md`). For now, your project is scaffolded and verified - happy hacking.
 
 Useful manual steps in the meantime:
+
 - `git init` (if you have not already) to start your own repo history.
 - Review any `.scaffold` siblings the conflict policy created and decide which version of each file to keep.
 - Address audit findings per your project's risk tolerance - the full breakdown is in this log.

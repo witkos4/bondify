@@ -16,11 +16,11 @@ The goal is to create lightweight daily rituals that improve trust and reduce ea
 
 ## Current Status
 
-This repository currently holds the product planning and stack-selection artifacts for the Bondify MVP.
+This repository contains the Bondify Astro application and the supporting planning artifacts for the MVP.
 
-- PRD is in place
-- Tech stack has been selected
-- Project scaffolding is the next step
+- Astro app is scaffolded and configured for SSR on Cloudflare Workers
+- Product and stack planning docs are in place under `context/`
+- First production deployment is being prepared
 
 ## Planned Stack
 
@@ -29,6 +29,14 @@ This repository currently holds the product planning and stack-selection artifac
 - Package manager: npm
 - Deployment target: Cloudflare Workers
 - CI provider: GitHub Actions
+
+## Deployment Model
+
+- Runtime and deploy target: Cloudflare Workers
+- First production release: manual deploy to `*.workers.dev` via `wrangler`
+- Ongoing production deploys: Cloudflare Workers Builds / Git integration on pushes to `master`
+- GitHub Actions role: CI only (`lint` and `build`), not release execution
+- Worker URL behavior: `workers_dev` and preview URLs are explicitly enabled in `wrangler.jsonc`
 
 ## Repository Layout
 
@@ -48,4 +56,4 @@ This repository currently holds the product planning and stack-selection artifac
 
 ## Next Step
 
-Scaffold the selected starter into this repository and begin implementing the MVP flow.
+Complete the first Cloudflare Workers deployment, verify auth and SSR behavior on the `workers.dev` URL, then enable Cloudflare-managed auto-deploys from `master`.
