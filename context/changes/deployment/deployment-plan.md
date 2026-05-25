@@ -110,7 +110,7 @@ Execution status:
 - Phase 1 - minimal production configuration: complete
 - Phase 2 - first manual deploy: complete
 - Phase 3 - post-deploy verification: complete
-- Phase 4 - Cloudflare-managed auto-deploy setup: in progress
+- Phase 4 - Cloudflare-managed auto-deploy setup: complete
 
 ### 1. Standardize the source of truth for deployment
 
@@ -211,10 +211,7 @@ Execution status:
   - `wrangler.jsonc` now explicitly sets `preview_urls: true`
   - deploy behavior no longer depends on Wrangler defaults for public and preview URLs
 - Remaining Cloudflare dashboard work:
-  - connect the GitHub repository to the `bondify` Worker in Cloudflare
-  - set the production branch to `master`
-  - verify that Cloudflare-managed builds receive `SUPABASE_URL` and `SUPABASE_KEY`
-  - confirm that a push to `master` creates a production deployment
+  - none for the initial rollout
 - Phase 4 dashboard checklist:
   - open Cloudflare Dashboard -> Workers & Pages -> `bondify`
   - go to Builds / Git integration and connect the GitHub repository
@@ -230,6 +227,11 @@ Execution status:
   - a push to `master` creates a Cloudflare-managed production deployment
   - GitHub Actions remains CI-only
   - the deployed app still sees `SUPABASE_URL` and `SUPABASE_KEY`
+- Phase 4 completion notes:
+  - Cloudflare Git integration is active for the `bondify` Worker
+  - Cloudflare-managed build finished successfully
+  - production verification after the green build passed for homepage, `/auth/signin`, and unauthenticated `/dashboard` redirect
+  - the deployment model is now validated in both modes: manual `wrangler deploy` and Cloudflare-managed deploy on push to `master`
 
 ## Public Interfaces and Configuration
 
@@ -246,6 +248,31 @@ Execution status:
 - `wrangler tail` shows valid request logs and no environment-related errors.
 - A trial code rollback is documented and can be executed without extra decisions.
 - After the repo is connected in Cloudflare, a push to `master` triggers a new deploy without GitHub Actions handling release execution.
+
+## Local Supabase Verification Notes
+
+- Current status: not verified as working.
+- Confirmed working pieces:
+  - the repo is initialized for local Supabase with `supabase/config.toml`
+  - the app expects `SUPABASE_URL` and `SUPABASE_KEY` for local/server runtime as well as production
+- Current local gaps:
+  - only `.env.example` is present in the repo snapshot used during verification
+  - no verified local `.env` or `.dev.vars` values were available during the check
+- Commands attempted:
+  - `npx supabase status`
+  - `npx supabase start`
+  - `npx supabase status --debug`
+- Result of the local check:
+  - all local Supabase CLI commands failed during Docker container inspection for `supabase_db_bondify`
+  - the failure indicates local infrastructure/runtime trouble, not an application-code failure in Bondify itself
+- Most likely causes to re-check after IDE/runtime restart:
+  - Docker Desktop was not fully healthy or not reachable from the shell session
+  - a stale or broken local Supabase container state exists
+- Next verification steps after restart:
+  - confirm Docker Desktop is running cleanly
+  - rerun `npx supabase start`
+  - rerun `npx supabase status`
+  - add verified local values in `.env` or `.dev.vars` if needed for local app runtime
 
 ## Assumptions
 

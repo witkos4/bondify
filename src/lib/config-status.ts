@@ -16,12 +16,10 @@ export function getConfigStatuses(): ConfigStatus[] {
       name: "Supabase",
       configured,
       message: "Supabase nie jest skonfigurowany — funkcje uwierzytelniania są wyłączone.",
-      docsUrl: "https://github.com/przeprogramowani/10x-astro-starter#supabase-configuration",
-      docsLabel: "Zobacz instrukcję konfiguracji",
     },
   ];
 }
 
-export function getMissingConfigs() {
+export function getMissingConfigs(): ConfigStatus[] {
   return getConfigStatuses().filter((status) => !status.configured);
 }

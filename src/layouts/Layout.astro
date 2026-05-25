@@ -2,13 +2,14 @@
 import "../styles/global.css";
 import Banner from "@/components/Banner.astro";
 import { getMissingConfigs } from "@/lib/config-status";
+import type { ConfigStatus } from "@/lib/config-status";
 
 interface Props {
   title?: string;
 }
 
-const { title = "10x Astro Starter" } = Astro.props;
-const missingConfigs = getMissingConfigs();
+const { title = "Bondify" } = Astro.props;
+const missingConfigs: ConfigStatus[] = getMissingConfigs();
 ---
 
 <!doctype html>
@@ -21,7 +22,7 @@ const missingConfigs = getMissingConfigs();
   </head>
   <body>
     {
-      missingConfigs.map((cfg) => (
+      missingConfigs.map((cfg: ConfigStatus) => (
         <Banner variant="error">
           <strong>Uwaga:</strong> {cfg.message}
           {cfg.docsUrl && (
