@@ -6,6 +6,8 @@ The first deployment should target **Cloudflare Workers**, not Cloudflare Pages.
 The chosen model is: **first deploy manually**, publish to **`*.workers.dev`**, and have the eventual **auto-deploy after pushes to `master`** handled by **Cloudflare**, not GitHub Actions.
 The required external prerequisites are already in place: Wrangler CLI is installed, the Cloudflare account is available, the Supabase Cloud project exists, and the GitHub repository is configured.
 
+Final status: this rollout is complete. Production is live on Cloudflare Workers, Cloudflare-managed deploys from `master` are active, local Supabase has been recovered and verified, and local app development can use `npm run dev:local` while the Cloudflare local runtime issue remains isolated as a non-blocking workstation/runtime caveat.
+
 ## Prerequisites
 
 Current status for this rollout:
@@ -111,6 +113,7 @@ Execution status:
 - Phase 2 - first manual deploy: complete
 - Phase 3 - post-deploy verification: complete
 - Phase 4 - Cloudflare-managed auto-deploy setup: complete
+- Phase 5 - steady-state follow-up: complete
 
 ### 1. Standardize the source of truth for deployment
 
@@ -189,9 +192,13 @@ Execution status:
   - `/auth/signin` renders without the configuration warning
   - unauthenticated access to `/dashboard` redirects to sign-in as expected
   - Wrangler secret inventory confirms both `SUPABASE_URL` and `SUPABASE_KEY` are present on the worker
+- Live route recheck on 2026-05-25:
+  - `GET /` returns `200 OK`
+  - `GET /auth/signin` returns `200 OK`
+  - `GET /dashboard` returns `302 Found` with `Location: /auth/signin` for unauthenticated access
 - Remaining manual verification for auth:
-  - sign in with a real test account and confirm session cookie creation
-  - sign out and confirm session clearing
+  - local auth with a real local test account was verified by the operator after local Supabase recovery
+  - production full-account sign-in remains an operational smoke test to repeat before meaningful production data is introduced
 
 ### 5. Target state after the first deployment
 
@@ -233,9 +240,23 @@ Execution status:
   - production verification after the green build passed for homepage, `/auth/signin`, and unauthenticated `/dashboard` redirect
   - the deployment model is now validated in both modes: manual `wrangler deploy` and Cloudflare-managed deploy on push to `master`
 
+### 6. Steady-state follow-up
+
+- The first production deployment is now live and the Cloudflare-managed deployment path is active.
+- Local Supabase was recovered and verified after Docker Desktop / WSL returned to a healthy state.
+- Local app development was verified through `npm run dev:local`, which runs Astro without the Cloudflare adapter and uses the local Supabase values from `.env`.
+- Local auth was tested successfully by the operator against the local Supabase stack.
+- Remaining work is no longer part of the first-deployment rollout; it is normal steady-state maintenance.
+- Optional operational follow-ups:
+  - repeat a full production auth smoke test before introducing meaningful production data
+  - keep `npx wrangler tail` ready for the next production change in case auth or SSR regressions appear
+  - investigate the local Cloudflare runtime failure if exact Workers-runtime local dev/build is needed on this Windows workstation
+
 ## Public Interfaces and Configuration
 
 - `wrangler.jsonc`: final Worker name, runtime, and assets binding.
+- `astro.local.config.mjs`: local-only Astro dev config that bypasses Cloudflare workerd/Miniflare for workstation development.
+- `package.json`: includes `dev:local` for local app development against local Supabase.
 - Cloudflare project settings: repository connection, production branch `master`, and environment variables/secrets for build and runtime.
 - GitHub Actions: keep the existing CI workflow with no publish steps.
 - Repository documentation: update README / foundation docs so there is no remaining Workers vs Pages or GitHub Actions vs Cloudflare deployment ownership conflict.
@@ -248,31 +269,96 @@ Execution status:
 - `wrangler tail` shows valid request logs and no environment-related errors.
 - A trial code rollback is documented and can be executed without extra decisions.
 - After the repo is connected in Cloudflare, a push to `master` triggers a new deploy without GitHub Actions handling release execution.
+- Local development can be run with `npm run dev:local -- --host 127.0.0.1 --port 4321`.
+- Local Supabase Studio is available at `http://127.0.0.1:54323`.
+- Local Mailpit is available at `http://127.0.0.1:54324`.
 
 ## Local Supabase Verification Notes
 
-- Current status: not verified as working.
+- Current status: local Supabase is verified as running, local auth works, and the local Astro page works through `npm run dev:local`.
 - Confirmed working pieces:
   - the repo is initialized for local Supabase with `supabase/config.toml`
   - the app expects `SUPABASE_URL` and `SUPABASE_KEY` for local/server runtime as well as production
+  - Docker Desktop now reports `Status: running`
+  - Docker CLI now reaches the `desktop-linux` engine successfully
+  - WSL now shows both `Ubuntu` and `docker-desktop`
+  - `npx supabase start --debug` completed successfully
+  - `npx supabase status` reports the local development setup as running
+  - local Studio is available at `http://127.0.0.1:54323`
+  - local Supabase API gateway is available at `http://127.0.0.1:54321`
+  - local Auth health returns the GoTrue health payload
+  - local Mailpit responds at `http://127.0.0.1:54324`
+  - a gitignored `.env` now contains local Supabase values for `SUPABASE_URL` and `SUPABASE_KEY`
+  - homepage returns `200 OK` locally through `npm run dev:local`
+  - `/auth/signin` returns `200 OK` locally through `npm run dev:local`
+  - unauthenticated `/dashboard` returns `302 Found` with `Location: /auth/signin`
+  - local signup/sign-in flow works with a local test account and Mailpit confirmation
 - Current local gaps:
-  - only `.env.example` is present in the repo snapshot used during verification
-  - no verified local `.env` or `.dev.vars` values were available during the check
+  - `supabase_vector_bondify` is restarting because it cannot connect to the Docker log source from inside the container
+  - `npx supabase status` reports `supabase_imgproxy_bondify` and `supabase_pooler_bondify` as stopped
+  - exact Cloudflare local runtime commands remain blocked on this workstation: `npm run build` fails with `write EOF`, and `npm run dev` exits with `write EPIPE` from Miniflare/workerd
+  - the local-only `dev:local` path is the accepted workaround for app development; production deployment remains Cloudflare-managed
 - Commands attempted:
   - `npx supabase status`
   - `npx supabase start`
   - `npx supabase status --debug`
+  - `docker info`
+  - `docker version`
+  - `docker ps -a`
+  - `docker desktop status`
+  - `docker desktop restart`
+  - `docker desktop stop && docker desktop start`
+  - `docker desktop logs`
+  - `wsl --list --verbose`
+  - `curl.exe -I http://127.0.0.1:54323`
+  - `curl.exe -I http://127.0.0.1:54324`
+  - `curl.exe http://127.0.0.1:54321/auth/v1/health`
+  - `npx -y -p node@22.14.0 node -v`
+  - `npx -y -p node@22.14.0 node ./node_modules/astro/bin/astro.mjs build`
+  - `npx -y -p node@22.14.0 node ./node_modules/astro/bin/astro.mjs build --verbose`
+  - `npx -y -p node@22.14.0 node ./node_modules/astro/bin/astro.mjs telemetry disable`
+  - `npx -y -p node@22.14.0 node ./node_modules/astro/bin/astro.mjs dev --host 127.0.0.1 --port 4321`
+  - `node_modules\@cloudflare\workerd-windows-64\bin\workerd.exe --version`
+  - `node_modules\@cloudflare\workerd-windows-64\bin\workerd.exe --help`
+  - `npm ci`
 - Result of the local check:
   - all local Supabase CLI commands failed during Docker container inspection for `supabase_db_bondify`
   - the failure indicates local infrastructure/runtime trouble, not an application-code failure in Bondify itself
-- Most likely causes to re-check after IDE/runtime restart:
-  - Docker Desktop was not fully healthy or not reachable from the shell session
-  - a stale or broken local Supabase container state exists
-- Next verification steps after restart:
-  - confirm Docker Desktop is running cleanly
-  - rerun `npx supabase start`
-  - rerun `npx supabase status`
-  - add verified local values in `.env` or `.dev.vars` if needed for local app runtime
+  - on 2026-05-25, Docker Desktop reported `Status: starting` for the full check window and never became healthy
+  - Docker CLI calls to the Desktop Linux engine returned `500 Internal Server Error` on engine endpoints such as `/version`, `/info`, and `/containers/json`
+  - Docker Desktop logs repeatedly showed the backend waiting for the engine `_ping` / init control API for over 21 hours, which points to a stuck Docker Desktop engine rather than a Supabase-specific failure
+  - CLI restart attempts did not recover the engine from the stuck `starting` state in this session
+  - on 2026-05-26, the recheck still failed before Supabase could start:
+    - `docker desktop status` reported `Status: starting`
+    - `docker version` and `docker ps -a` timed out, then returned `500 Internal Server Error` from the Docker Desktop Linux engine API
+    - `wsl --status` reported WSL default version 2
+    - `wsl --list --verbose` reported no installed WSL distributions, so Docker Desktop had no visible healthy Linux backend distribution
+    - `npx supabase status --debug` failed while inspecting `supabase_db_bondify`
+    - `npx supabase start --debug` failed while inspecting the same Docker service
+  - later on 2026-05-26, Docker recovered and local Supabase startup succeeded:
+    - `docker desktop status` reported `Status: running`
+    - `docker version` and `docker info` succeeded against Docker Desktop `4.75.0`
+    - `wsl --list --verbose` showed `Ubuntu` and `docker-desktop`
+    - `npx supabase start --debug` pulled images and started the local Supabase stack
+    - `npx supabase status` reported `supabase local development setup is running`
+    - the main containers were healthy: DB, Auth, Kong, Studio, Storage, Realtime, Inbucket/Mailpit, Analytics, and PG Meta
+    - local Auth health returned the GoTrue health JSON
+- Current root-cause assessment:
+  - the original blocker was Docker Desktop / WSL backend health, not Bondify application code
+  - that blocker is now cleared for local Supabase startup
+  - remaining Supabase caveat is the restarting Vector logging sidecar, which does not block DB/Auth/API/Studio usage in this verification
+  - remaining app-runtime blocker is now isolated to the Cloudflare local runtime path:
+    - Astro build fails with `write EOF`
+    - Astro dev exits with `write EPIPE` in `node_modules/miniflare/dist/src/index.js` while assembling/updating config
+    - the installed `workerd.exe` exits with code `1` for `--version` and `--help`, without useful output in this shell
+  - `.nvmrc` now matches the local system Node version `26.2.0`; temporary Node `22.14.0` did not clear the Miniflare/workerd failure either
+  - a clean `npm ci` reinstall completed successfully but did not clear the `workerd.exe` or Astro build failure
+- Conclusion:
+  - first production deployment is complete
+  - Cloudflare-managed production deployment from `master` is complete
+  - local Supabase recovery is complete
+  - local app verification is complete through `dev:local`
+  - remaining Cloudflare local runtime repair is an optional workstation follow-up, not a blocker for this rollout
 
 ## Assumptions
 

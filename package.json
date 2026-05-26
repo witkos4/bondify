@@ -2,8 +2,12 @@
   "name": "bondify",
   "type": "module",
   "version": "0.0.1",
+  "engines": {
+    "node": "26.2.0"
+  },
   "scripts": {
     "dev": "astro dev",
+    "dev:local": "astro dev --config astro.local.config.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",

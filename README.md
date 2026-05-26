@@ -20,7 +20,8 @@ This repository contains the Bondify Astro application and the supporting planni
 
 - Astro app is scaffolded and configured for SSR on Cloudflare Workers
 - Product and stack planning docs are in place under `context/`
-- First production deployment is being prepared
+- First production deployment is live at `https://bondify.witkos4.workers.dev`
+- Cloudflare-managed production deploys from `master` are enabled
 
 ## Planned Stack
 
@@ -56,4 +57,4 @@ This repository contains the Bondify Astro application and the supporting planni
 
 ## Next Step
 
-Complete the first Cloudflare Workers deployment, verify auth and SSR behavior on the `workers.dev` URL, then enable Cloudflare-managed auto-deploys from `master`.
+Continue MVP feature development. For local app work, start local Supabase and run `npm run dev:local`.
