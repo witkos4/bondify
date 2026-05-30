@@ -459,7 +459,7 @@ export function createBondifyServices(context: ServiceContext) {
         return rows.map((row) => ({
           team: toTeam(row),
           memberships: row.team_memberships.map(toTeamRosterEntry),
-          pendingInvites: row.team_invites.map(toTeamInviteView),
+          pendingInvites: row.team_invites.filter((invite) => invite.status === "pending").map(toTeamInviteView),
         }));
       });
     },

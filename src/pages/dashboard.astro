@@ -1,27 +1,291 @@
 ---
 import Layout from "@/layouts/Layout.astro";
+import Topbar from "@/components/Topbar.astro";
+import { callBondifyService, createBondifyServices } from "@/lib/services/bondify";
+import type { TeamSummary, TeamInviteView } from "@/types";
 
 const { user } = Astro.locals;
+const services = createBondifyServices({
+  requestHeaders: Astro.request.headers,
+  cookies: Astro.cookies,
+});
+
+const [teamSummariesResult, incomingInvitesResult] = await Promise.all([
+  callBondifyService(() => services.getCurrentTeamSummaries()),
+  callBondifyService(() => services.listPendingInvitesForCurrentProfile()),
+]);
+
+const teamSummaries: TeamSummary[] = teamSummariesResult.data ?? [];
+const incomingInvites: TeamInviteView[] = incomingInvitesResult.data ?? [];
+const selectedTeamId = Astro.url.searchParams.get("team");
+let selectedTeam: TeamSummary | null = null;
+
+if (teamSummaries.length > 0) {
+  selectedTeam = teamSummaries.find((summary) => summary.team.id === selectedTeamId) ?? teamSummaries[0];
+}
+const hasMultipleTeams = teamSummaries.length > 1;
+const hasMemberships = teamSummaries.length > 0;
+const activeTeamName = selectedTeam ? selectedTeam.team.name : "No active team selected";
+const activeTeamMemberCount = selectedTeam ? selectedTeam.memberships.length : 0;
+const activeTeamPendingInviteCount = selectedTeam ? selectedTeam.pendingInvites.length : 0;
+const activeTeamId = selectedTeam ? selectedTeam.team.id : "";
+
+function formatInviteLabel(invite: TeamInviteView) {
+  return `Pending invite for ${invite.invite.email} to join team ${invite.invite.teamId}.`;
+}
 ---
 
 <Layout title="Dashboard">
-  <div class="bg-cosmic flex min-h-screen items-center justify-center p-4">
-    <div class="rounded-2xl border border-white/10 bg-white/10 p-8 text-center text-white backdrop-blur-xl">
-      <h1 class="mb-4 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-3xl font-bold text-transparent">
-        Dashboard
-      </h1>
-      <p class="text-blue-100/80">
-        Welcome, <span class="font-semibold text-white">{user?.email}</span>
-      </p>
-      <p class="mt-2 text-sm text-blue-100/50">This page is only for authenticated users.</p>
-      <form method="POST" action="/api/auth/signout" class="mt-6">
-        <button
-          type="submit"
-          class="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm transition-colors hover:bg-white/20"
-        >
-          Sign out
-        </button>
-      </form>
+  <div class="bg-cosmic min-h-screen">
+    <div class="mx-auto max-w-6xl px-4 py-4 sm:px-8">
+      <Topbar />
+
+      <main class="mt-8 space-y-6 pb-12">
+        <section class="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+          <div
+            class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-8"
+          >
+            <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+              <div class="max-w-2xl">
+                <p class="text-xs font-semibold tracking-[0.3em] text-cyan-200/70 uppercase">Team home</p>
+                <h1
+                  class="mt-3 bg-gradient-to-r from-cyan-100 via-sky-100 to-amber-100 bg-clip-text text-4xl font-semibold text-transparent sm:text-5xl"
+                >
+                  Welcome back{user?.email ? `, ${user.email}` : ""}.
+                </h1>
+                <p class="mt-4 max-w-xl text-base leading-7 text-blue-100/75">
+                  Bondify’s dashboard now loads your real team context from the foundation layer. This phase makes the
+                  authenticated shell useful for team awareness before we wire in team creation and invite actions.
+                </p>
+              </div>
+
+              {
+                hasMemberships ? (
+                  <div class="min-w-[18rem] rounded-3xl border border-white/10 bg-slate-950/30 p-4">
+                    <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Active team</p>
+                    <h2 class="mt-2 text-2xl font-semibold text-white">{activeTeamName}</h2>
+                    <p class="mt-2 text-sm text-blue-100/60">
+                      {activeTeamMemberCount} members
+                      {" · "}
+                      {activeTeamPendingInviteCount} pending invites
+                    </p>
+
+                    {hasMultipleTeams ? (
+                      <form method="GET" class="mt-4 space-y-3">
+                        <label class="block text-sm text-blue-100/70" for="team-switcher">
+                          Switch active team
+                        </label>
+                        <select
+                          id="team-switcher"
+                          name="team"
+                          class="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white transition outline-none focus:border-cyan-300/70"
+                        >
+                          {teamSummaries.map((summary) => (
+                            <option
+                              value={summary.team.id}
+                              selected={summary.team.id === activeTeamId}
+                              class="bg-slate-950 text-white"
+                            >
+                              {summary.team.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="submit"
+                          class="w-full rounded-2xl bg-cyan-400/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                        >
+                          View selected team
+                        </button>
+                      </form>
+                    ) : (
+                      <p class="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-blue-100/65">
+                        You’re currently active in one team. Multi-team switching will appear here automatically as soon
+                        as you join another team.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div class="min-w-[18rem] rounded-3xl border border-amber-300/20 bg-amber-300/8 p-4 text-amber-50">
+                    <p class="text-xs font-semibold tracking-[0.25em] text-amber-100/70 uppercase">First milestone</p>
+                    <h2 class="mt-2 text-2xl font-semibold">No teams yet</h2>
+                    <p class="mt-2 text-sm leading-6 text-amber-50/75">
+                      This empty state replaces the old placeholder dashboard. Team creation is the next step in this
+                      change and will plug into this shell in Phase 2.
+                    </p>
+                    <a
+                      href="#create-team-next"
+                      class="mt-4 inline-flex rounded-2xl border border-amber-100/25 px-4 py-3 text-sm font-semibold text-amber-50 transition hover:bg-amber-50/10"
+                    >
+                      See create-team affordance
+                    </a>
+                  </div>
+                )
+              }
+            </div>
+          </div>
+
+          <aside
+            class="rounded-[2rem] border border-white/12 bg-slate-950/35 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8"
+          >
+            <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Incoming invites</p>
+            <h2 class="mt-3 text-2xl font-semibold text-white">Teams waiting for you</h2>
+            <p class="mt-2 text-sm leading-6 text-blue-100/65">
+              Invite acceptance lands in Phase 3. This panel makes the path visible now so invited users understand what
+              will happen next.
+            </p>
+
+            {
+              incomingInvites.length > 0 ? (
+                <ul class="mt-6 space-y-3">
+                  {incomingInvites.map((invite) => (
+                    <li class="rounded-3xl border border-white/10 bg-white/6 p-4">
+                      <p class="text-sm font-medium text-white">{invite.invite.email}</p>
+                      <p class="mt-1 text-sm text-blue-100/65">Status: {invite.invite.status}</p>
+                      <p class="mt-2 text-xs leading-5 text-blue-100/50">{formatInviteLabel(invite)}</p>
+                      <button
+                        type="button"
+                        disabled
+                        class="mt-4 rounded-2xl border border-white/10 px-4 py-2 text-sm text-blue-100/45"
+                      >
+                        Accept invite in Phase 3
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div class="mt-6 rounded-3xl border border-dashed border-white/15 bg-white/5 p-5 text-sm leading-6 text-blue-100/60">
+                  No pending invites match your account email right now. When someone invites you to a team, the
+                  acceptance path will surface here.
+                </div>
+              )
+            }
+          </aside>
+        </section>
+
+        {
+          selectedTeam !== null ? (
+            <section class="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+              <div class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
+                <div class="flex items-end justify-between gap-4">
+                  <div>
+                    <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Roster</p>
+                    <h2 class="mt-2 text-3xl font-semibold">{selectedTeam.team.name}</h2>
+                    <p class="mt-2 text-sm leading-6 text-blue-100/65">
+                      Active members and pending invites already share one surface so later invite management can slot
+                      in without changing the mental model.
+                    </p>
+                  </div>
+                  <div class="rounded-3xl border border-white/10 bg-slate-950/35 px-4 py-3 text-right">
+                    <p class="text-xs tracking-[0.2em] text-blue-100/45 uppercase">Selected team</p>
+                    <p class="mt-1 text-lg font-semibold text-white">{selectedTeam.team.name}</p>
+                  </div>
+                </div>
+
+                <div class="mt-8 grid gap-4">
+                  {selectedTeam.memberships.map((entry) => (
+                    <article class="rounded-3xl border border-white/10 bg-slate-950/25 px-5 py-4">
+                      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p class="text-lg font-medium text-white">{entry.profile.email}</p>
+                          <p class="mt-1 text-sm text-blue-100/55">Member since {entry.membership.createdAt}</p>
+                        </div>
+                        <span class="inline-flex rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 text-xs font-semibold tracking-[0.2em] text-emerald-100 uppercase">
+                          Active member
+                        </span>
+                      </div>
+                    </article>
+                  ))}
+
+                  {selectedTeam.pendingInvites.map((invite) => (
+                    <article class="rounded-3xl border border-dashed border-cyan-200/20 bg-cyan-200/6 px-5 py-4">
+                      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p class="text-lg font-medium text-white">{invite.invite.email}</p>
+                          <p class="mt-1 text-sm text-blue-100/55">Invite pending for this team</p>
+                        </div>
+                        <span class="inline-flex rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1 text-xs font-semibold tracking-[0.2em] text-cyan-100 uppercase">
+                          Pending invite
+                        </span>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+
+              <div class="space-y-6">
+                <section
+                  id="create-team-next"
+                  class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8"
+                >
+                  <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Next in Phase 2</p>
+                  <h2 class="mt-2 text-2xl font-semibold">Create or grow a team</h2>
+                  <p class="mt-3 text-sm leading-6 text-blue-100/65">
+                    This shell is ready for team creation and batch invite actions. The actual forms arrive in the next
+                    phase so they can bind directly to the foundation service layer.
+                  </p>
+                  <div class="mt-5 rounded-3xl border border-dashed border-white/15 bg-slate-950/25 p-4 text-sm text-blue-100/60">
+                    Planned next actions:
+                    <ul class="mt-3 space-y-2">
+                      <li>Team creation from empty and populated states</li>
+                      <li>Batch teammate invite form with row-level feedback</li>
+                      <li>Invite permissions for any active member of the selected team</li>
+                    </ul>
+                  </div>
+                </section>
+
+                <section class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
+                  <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Session controls</p>
+                  <h2 class="mt-2 text-2xl font-semibold">Still safe to leave</h2>
+                  <p class="mt-3 text-sm leading-6 text-blue-100/65">
+                    The redesigned dashboard keeps sign-out available from the authenticated shell while we evolve the
+                    rest of the team setup flow.
+                  </p>
+                  <form method="POST" action="/api/auth/signout" class="mt-5">
+                    <button
+                      type="submit"
+                      class="w-full rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/15"
+                    >
+                      Sign out
+                    </button>
+                  </form>
+                </section>
+              </div>
+            </section>
+          ) : (
+            <section class="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+              <div
+                id="create-team-next"
+                class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8"
+              >
+                <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Create-team affordance</p>
+                <h2 class="mt-2 text-3xl font-semibold">Start your first Bondify team here</h2>
+                <p class="mt-3 max-w-2xl text-sm leading-7 text-blue-100/70">
+                  The placeholder dashboard is gone. This panel marks the exact space where team creation will land in
+                  Phase 2, so first-time users already have a clear path instead of a dead-end authenticated page.
+                </p>
+                <div class="mt-6 rounded-[1.75rem] border border-dashed border-cyan-200/20 bg-slate-950/25 p-5">
+                  <p class="text-sm font-medium text-white">What Phase 2 adds here</p>
+                  <ul class="mt-3 space-y-2 text-sm leading-6 text-blue-100/60">
+                    <li>A real team creation form wired to the foundation service</li>
+                    <li>Immediate promotion of the new team into active team context</li>
+                    <li>Space for batch invite entry once the first team exists</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
+                <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">What’s already real</p>
+                <h2 class="mt-2 text-2xl font-semibold">Foundation is connected</h2>
+                <ul class="mt-4 space-y-3 text-sm leading-6 text-blue-100/65">
+                  <li>Your authenticated profile is loaded from the Bondify service layer.</li>
+                  <li>This page already checks for memberships and matching incoming invites on the server.</li>
+                  <li>The same shell will expand into team creation, invites, and acceptance over the next phases.</li>
+                </ul>
+              </div>
+            </section>
+          )
+        }
+      </main>
     </div>
   </div>
 </Layout>
