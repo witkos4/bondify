@@ -299,27 +299,27 @@ Finish the foundation so the next implementation slice can start immediately wit
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly in local Supabase
-- [x] 1.2 Lint passes with schema-facing updates
-- [x] 1.3 Build passes with schema-facing updates
+- [x] 1.1 Migration applies cleanly in local Supabase — 73497b7
+- [x] 1.2 Lint passes with schema-facing updates — 73497b7
+- [x] 1.3 Build passes with schema-facing updates — 73497b7
 
 #### Manual
 
-- [x] 1.4 Domain tables, constraints, and indexes verified in local DB
-- [x] 1.5 Multi-team membership contract verified manually
-- [x] 1.6 Pending pre-sign-up invite verified manually
+- [x] 1.4 Domain tables, constraints, and indexes verified in local DB — 73497b7
+- [x] 1.5 Multi-team membership contract verified manually — 73497b7
+- [x] 1.6 Pending pre-sign-up invite verified manually — 73497b7
 
 ### Phase 2: App-facing types and service contracts
 
 #### Automated
 
-- [ ] 2.1 Lint passes with shared types and service modules
-- [ ] 2.2 Build passes with service-layer contracts
+- [x] 2.1 Lint passes with shared types and service modules
+- [x] 2.2 Build passes with service-layer contracts
 
 #### Manual
 
-- [ ] 2.3 Downstream slice contract coverage reviewed
-- [ ] 2.4 Participant-facing payloads verified to omit responder identity
+- [x] 2.3 Downstream slice contract coverage reviewed
+- [x] 2.4 Participant-facing payloads verified to omit responder identity
 
 ### Phase 3: Reference data, verification path, and doc alignment
 
