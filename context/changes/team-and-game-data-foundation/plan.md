@@ -313,24 +313,24 @@ Finish the foundation so the next implementation slice can start immediately wit
 
 #### Automated
 
-- [x] 2.1 Lint passes with shared types and service modules
-- [x] 2.2 Build passes with service-layer contracts
+- [x] 2.1 Lint passes with shared types and service modules — 940bddd
+- [x] 2.2 Build passes with service-layer contracts — 940bddd
 
 #### Manual
 
-- [x] 2.3 Downstream slice contract coverage reviewed
-- [x] 2.4 Participant-facing payloads verified to omit responder identity
+- [x] 2.3 Downstream slice contract coverage reviewed — 940bddd
+- [x] 2.4 Participant-facing payloads verified to omit responder identity — 940bddd
 
 ### Phase 3: Reference data, verification path, and doc alignment
 
 #### Automated
 
-- [ ] 3.1 Selected-game initialization runs without duplicates
-- [ ] 3.2 Lint passes after final doc and contract updates
-- [ ] 3.3 Build passes with final foundation shape
+- [x] 3.1 Selected-game initialization runs without duplicates
+- [x] 3.2 Lint passes after final doc and contract updates
+- [x] 3.3 Build passes with final foundation shape
 
 #### Manual
 
-- [ ] 3.4 Selected game templates verified locally
-- [ ] 3.5 Product docs aligned with email-based invite decision
-- [ ] 3.6 Next slice confirmed unblocked without schema redesign
+- [x] 3.4 Selected game templates verified locally
+- [x] 3.5 Product docs aligned with email-based invite decision
+- [x] 3.6 Next slice confirmed unblocked without schema redesign

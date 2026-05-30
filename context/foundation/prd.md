@@ -33,7 +33,7 @@ A team lead or manager inside a newly formed team who wants to reduce stiffness 
 
 ### Primary
 
-- An authenticated user creates a team, adds teammates by username, opens a micro-game, and the team submits responses that are revealed together on a single shared results screen.
+- An authenticated user creates a team, adds teammates by email, opens a micro-game, and the team submits responses that are revealed together on a single shared results screen.
 
 ### Secondary
 
@@ -56,7 +56,7 @@ A team lead or manager inside a newly formed team who wants to reduce stiffness 
 
 - User can initiate OAuth sign-in from the landing page and return to the app as an authenticated session without errors.
 - An authenticated user can create a team and see it appear in their team list immediately.
-- A user can add teammates through visible, shareable usernames, and added users can join the team and appear in the member list.
+- A user can add teammates through email-based invites, and added users can join the team and appear in the member list.
 - Any team member can open a micro-game without a separate session-management flow.
 - Other teammates can access the active micro-game immediately and submit exactly one anonymous response to the active prompt.
 - After all responses are submitted or time expires, a shared results screen appears and shows every teammate's submission to all participants.
@@ -68,8 +68,8 @@ A team lead or manager inside a newly formed team who wants to reduce stiffness 
   > Socrates: Counter-argument considered: "OAuth adds avoidable setup friction; a simpler invite-only flow would prove the product faster." Resolution: kept; OAuth remains the MVP entry path.
 - FR-002: User can create a team. Priority: must-have
   > Socrates: Counter-argument considered: "Team creation should be deferred until after a first solo or demo experience." Resolution: kept; team creation remains part of the first MVP path.
-- FR-003: User can add teammates to a team through visible, shareable usernames. Priority: must-have
-  > Socrates: Counter-argument considered: "Username-based invites are too restrictive; invite links would be a lower-friction MVP." Resolution: revised; usernames remain the add path, but they must be visible and easy to share.
+- FR-003: User can add teammates to a team through email-based invites. Priority: must-have
+  > Socrates: Counter-argument considered: "Email-based invites leak personal identifiers; a username or invite-link model would be more privacy-friendly." Resolution: revised; email invites remain the MVP path because they remove username setup work and fit the shortest team-setup flow.
 - FR-004: User can open a micro-game and participate without a separate session-management step. Priority: must-have
   > Socrates: Counter-argument considered: "Letting any team member start sessions may create noise; only one starter should trigger sessions." Resolution: revised; the MVP removes formal session management and focuses on gathering input and returning output.
 - FR-005: User can submit an anonymous response to the active micro-game. Priority: must-have
