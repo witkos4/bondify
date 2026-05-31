@@ -3,7 +3,7 @@ project: Bondify
 version: 1
 status: proposed
 created: 2026-05-27
-updated: 2026-05-27
+updated: 2026-06-01
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -126,6 +126,7 @@ Status: proposed
 - Advanced admin features and multi-workspace management stay parked because the first version is focused on one lightweight team space at a time.
 - Long-term archives beyond the 30-day history window stay parked because recent interaction history is enough for the MVP.
 - Dedicated observability investment stays parked unless launch feedback shows reliability gaps that the current lightweight path cannot cover.
+- Unique team-name enforcement stays parked for a later stage; the current MVP setup flow allows duplicate team names while the product validates the core team ritual.
 
 ## Done
 

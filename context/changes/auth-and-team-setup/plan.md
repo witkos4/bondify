@@ -302,7 +302,7 @@ Complete the team setup milestone by allowing invited users to explicitly accept
 
 #### Manual
 
-- [ ] 2.3 Team creation verified from dashboard
+- [x] 2.3 Team creation verified from dashboard
 - [ ] 2.4 Combined roster verified for members and pending invites
 - [ ] 2.5 Partial-success batch invite handling verified with row-level errors
 
@@ -310,11 +310,11 @@ Complete the team setup milestone by allowing invited users to explicitly accept
 
 #### Automated
 
-- [ ] 3.1 Lint passes with invite-acceptance flow
-- [ ] 3.2 Build passes with final team-setup behavior
+- [x] 3.1 Lint passes with invite-acceptance flow
+- [x] 3.2 Build passes with final team-setup behavior
 
 #### Manual
 
-- [ ] 3.3 Matching pending invite visibility verified for invited user
+- [x] 3.3 Matching pending invite visibility verified for invited user
 - [ ] 3.4 Explicit invite acceptance verified
 - [ ] 3.5 Two-account happy path verified end to end

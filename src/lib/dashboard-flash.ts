@@ -21,6 +21,16 @@ type DashboardFlash =
       submittedEmails: string[];
       results: TeamInviteCreateResult[];
       message: string;
+    }
+  | {
+      type: "invite-accepted";
+      teamId: string;
+      message: string;
+    }
+  | {
+      type: "invite-accept-error";
+      inviteId: string;
+      message: string;
     };
 
 function serializeFlash(value: DashboardFlash): string {

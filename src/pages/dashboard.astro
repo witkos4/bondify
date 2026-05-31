@@ -32,6 +32,10 @@ const activeTeamMemberCount = selectedTeam ? selectedTeam.memberships.length : 0
 const activeTeamPendingInviteCount = selectedTeam ? selectedTeam.pendingInvites.length : 0;
 const activeTeamId = selectedTeam ? selectedTeam.team.id : "";
 const inviteFlash = dashboardFlash?.type === "invite-results" ? dashboardFlash : null;
+const inviteAcceptedFlash = dashboardFlash?.type === "invite-accepted" ? dashboardFlash : null;
+const inviteAcceptErrorFlash = dashboardFlash?.type === "invite-accept-error" ? dashboardFlash : null;
+const shouldShowIncomingInvitesPanel =
+  incomingInvites.length > 0 || inviteAcceptedFlash !== null || inviteAcceptErrorFlash !== null;
 const teamCreatedFlash = dashboardFlash?.type === "team-created" ? dashboardFlash : null;
 const teamCreateErrorFlash = dashboardFlash?.type === "team-create-error" ? dashboardFlash : null;
 const createTeamInputValue = teamCreateErrorFlash?.teamName ?? "";
@@ -70,7 +74,7 @@ function formatInviteResultTitle(result: TeamInviteCreateResult) {
       <Topbar />
 
       <main class="mt-8 space-y-6 pb-12">
-        <section class="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+        <section>
           <div
             class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-8"
           >
@@ -152,44 +156,70 @@ function formatInviteResultTitle(result: TeamInviteCreateResult) {
               }
             </div>
           </div>
+        </section>
 
-          <aside
-            class="rounded-[2rem] border border-white/12 bg-slate-950/35 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8"
-          >
-            <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Incoming invites</p>
-            <h2 class="mt-3 text-2xl font-semibold text-white">Teams waiting for you</h2>
-            <p class="mt-2 text-sm leading-6 text-blue-100/65">
-              Invite acceptance lands in Phase 3. This panel makes the path visible now so invited users understand what
-              will happen next.
-            </p>
+        {
+          shouldShowIncomingInvitesPanel && (
+            <section
+              id="incoming-invites"
+              class="rounded-[2rem] border border-white/12 bg-slate-950/35 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8"
+            >
+              <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div class="max-w-2xl">
+                  <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Incoming invites</p>
+                  <h2 class="mt-3 text-2xl font-semibold text-white">Teams waiting for you</h2>
+                  <p class="mt-2 text-sm leading-6 text-blue-100/65">
+                    Accept invitations addressed to your account email here. Joined teams become selectable immediately
+                    from the active-team dropdown.
+                  </p>
+                </div>
 
-            {
-              incomingInvites.length > 0 ? (
-                <ul class="mt-6 space-y-3">
+                {incomingInvites.length > 0 && (
+                  <div class="rounded-3xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-blue-100/65">
+                    {incomingInvites.length} pending invite{incomingInvites.length === 1 ? "" : "s"}
+                  </div>
+                )}
+              </div>
+
+              {inviteAcceptedFlash && (
+                <div class="mt-5 rounded-3xl border border-emerald-300/25 bg-emerald-300/10 p-4 text-sm leading-6 text-emerald-100">
+                  {inviteAcceptedFlash.message}
+                </div>
+              )}
+
+              {inviteAcceptErrorFlash && (
+                <div class="mt-5 rounded-3xl border border-red-500/30 bg-red-900/40 p-4 text-sm leading-6 text-red-300">
+                  {inviteAcceptErrorFlash.message}
+                </div>
+              )}
+
+              {incomingInvites.length > 0 && (
+                <ul class="mt-6 grid gap-3 md:grid-cols-2">
                   {incomingInvites.map((invite) => (
                     <li class="rounded-3xl border border-white/10 bg-white/6 p-4">
-                      <p class="text-sm font-medium text-white">{invite.invite.email}</p>
-                      <p class="mt-1 text-sm text-blue-100/65">Status: {invite.invite.status}</p>
-                      <p class="mt-2 text-xs leading-5 text-blue-100/50">{formatInviteLabel(invite)}</p>
-                      <button
-                        type="button"
-                        disabled
-                        class="mt-4 rounded-2xl border border-white/10 px-4 py-2 text-sm text-blue-100/45"
-                      >
-                        Accept invite in Phase 3
-                      </button>
+                      <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p class="text-sm font-medium text-white">{invite.invite.email}</p>
+                          <p class="mt-1 text-sm text-blue-100/65">Status: {invite.invite.status}</p>
+                          <p class="mt-2 text-xs leading-5 text-blue-100/50">{formatInviteLabel(invite)}</p>
+                        </div>
+                        <form method="POST" action="/api/teams/accept-invite" class="sm:min-w-36">
+                          <input type="hidden" name="inviteId" value={invite.invite.id} />
+                          <button
+                            type="submit"
+                            class="w-full rounded-2xl bg-emerald-300/90 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200"
+                          >
+                            Accept invite
+                          </button>
+                        </form>
+                      </div>
                     </li>
                   ))}
                 </ul>
-              ) : (
-                <div class="mt-6 rounded-3xl border border-dashed border-white/15 bg-white/5 p-5 text-sm leading-6 text-blue-100/60">
-                  No pending invites match your account email right now. When someone invites you to a team, the
-                  acceptance path will surface here.
-                </div>
-              )
-            }
-          </aside>
-        </section>
+              )}
+            </section>
+          )
+        }
 
         {
           selectedTeam !== null ? (
@@ -429,7 +459,7 @@ function formatInviteResultTitle(result: TeamInviteCreateResult) {
                 <ul class="mt-4 space-y-3 text-sm leading-6 text-blue-100/65">
                   <li>Your authenticated profile is loaded from the Bondify service layer.</li>
                   <li>Creating your first team immediately unlocks the shared roster and invite actions.</li>
-                  <li>The same shell will expand into invite acceptance in the next phase.</li>
+                  <li>Matching pending invites can be accepted directly from the dashboard.</li>
                 </ul>
               </div>
             </section>
