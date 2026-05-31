@@ -3,8 +3,8 @@ import type { AstroCookies } from "astro";
 import { getSecret } from "astro:env/server";
 
 function getSupabaseConfig() {
-  const url = getSecret("SUPABASE_URL");
-  const key = getSecret("SUPABASE_KEY");
+  const url = getSecret("NEXT_PUBLIC_SUPABASE_URL") ?? getSecret("SUPABASE_URL");
+  const key = getSecret("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY") ?? getSecret("SUPABASE_KEY");
 
   if (!url || !key) {
     return null;
