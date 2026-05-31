@@ -325,12 +325,12 @@ Finish the foundation so the next implementation slice can start immediately wit
 
 #### Automated
 
-- [x] 3.1 Selected-game initialization runs without duplicates
-- [x] 3.2 Lint passes after final doc and contract updates
-- [x] 3.3 Build passes with final foundation shape
+- [x] 3.1 Selected-game initialization runs without duplicates — 21ba943
+- [x] 3.2 Lint passes after final doc and contract updates — 21ba943
+- [x] 3.3 Build passes with final foundation shape — 21ba943
 
 #### Manual
 
-- [x] 3.4 Selected game templates verified locally
-- [x] 3.5 Product docs aligned with email-based invite decision
-- [x] 3.6 Next slice confirmed unblocked without schema redesign
+- [x] 3.4 Selected game templates verified locally — 21ba943
+- [x] 3.5 Product docs aligned with email-based invite decision — 21ba943
+- [x] 3.6 Next slice confirmed unblocked without schema redesign — 21ba943

@@ -1,9 +1,9 @@
 ---
 change_id: team-and-game-data-foundation
 title: Team and game data foundation
-status: implementing
+status: implemented
 created: 2026-05-27
-updated: 2026-05-30
+updated: 2026-05-31
 archived_at: null
 ---
 

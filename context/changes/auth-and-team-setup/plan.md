@@ -284,21 +284,21 @@ Complete the team setup milestone by allowing invited users to explicitly accept
 
 #### Automated
 
-- [x] 1.1 Lint passes with the new dashboard shell
-- [x] 1.2 Build passes with the authenticated team-home route behavior
+- [x] 1.1 Lint passes with the new dashboard shell — d72583d
+- [x] 1.2 Build passes with the authenticated team-home route behavior — d72583d
 
 #### Manual
 
-- [x] 1.3 Empty team-home state verified for a signed-in user with no memberships
-- [x] 1.4 Active-team dropdown switching verified for a multi-team user
-- [x] 1.5 Sign-out still works from the redesigned dashboard
+- [x] 1.3 Empty team-home state verified for a signed-in user with no memberships — d72583d
+- [x] 1.4 Active-team dropdown switching verified for a multi-team user — d72583d
+- [x] 1.5 Sign-out still works from the redesigned dashboard — d72583d
 
 ### Phase 2: Team creation and roster management
 
 #### Automated
 
-- [ ] 2.1 Lint passes with team creation and invite-management UI
-- [ ] 2.2 Build passes with team creation and roster flows
+- [x] 2.1 Lint passes with team creation and invite-management UI
+- [x] 2.2 Build passes with team creation and roster flows
 
 #### Manual
 

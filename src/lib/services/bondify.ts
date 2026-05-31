@@ -159,6 +159,10 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 function toProfile(row: ProfileRow): BondifyProfile {
   return {
     id: row.id,
@@ -471,30 +475,50 @@ export function createBondifyServices(context: ServiceContext) {
       }
 
       return withCurrentProfile(async (supabase, profile) => {
-        const { data: createdTeam, error: createTeamError } = await supabase
+        const teamId = crypto.randomUUID();
+
+        const { error: createTeamError } = await supabase
           .from("teams")
-          .insert({ name, created_by: profile.id })
-          .select("id, name, created_by, created_at, updated_at")
-          .single();
+          .insert({ id: teamId, name, created_by: profile.id });
 
         if (createTeamError) {
           throw new BondifyServiceError("TEAM_NOT_FOUND", createTeamError.message);
         }
 
-        const teamRow: TeamRow = createdTeam;
-
-        const { data: membership, error: membershipError } = await supabase
-          .from("team_memberships")
-          .insert({
-            team_id: teamRow.id,
-            profile_id: profile.id,
-          })
-          .select("id, team_id, profile_id, created_at")
-          .single();
+        const { error: membershipError } = await supabase.from("team_memberships").insert({
+          team_id: teamId,
+          profile_id: profile.id,
+        });
 
         if (membershipError) {
-          throw mapDuplicateInsertError(membershipError, duplicateMembershipError(teamRow.id, profile.id));
+          throw mapDuplicateInsertError(membershipError, duplicateMembershipError(teamId, profile.id));
         }
+
+        const { data: membership, error: createdMembershipError } = await supabase
+          .from("team_memberships")
+          .select("id, team_id, profile_id, created_at")
+          .eq("team_id", teamId)
+          .eq("profile_id", profile.id)
+          .single();
+
+        if (createdMembershipError) {
+          throw new BondifyServiceError("TEAM_ACCESS_DENIED", createdMembershipError.message, {
+            teamId,
+            profileId: profile.id,
+          });
+        }
+
+        const { data: createdTeam, error: createdTeamError } = await supabase
+          .from("teams")
+          .select("id, name, created_by, created_at, updated_at")
+          .eq("id", teamId)
+          .single();
+
+        if (createdTeamError) {
+          throw new BondifyServiceError("TEAM_NOT_FOUND", createdTeamError.message, { teamId });
+        }
+
+        const teamRow: TeamRow = createdTeam;
 
         return {
           team: toTeam(teamRow),
@@ -518,8 +542,10 @@ export function createBondifyServices(context: ServiceContext) {
         await requireMembershipAccess(supabase, input.teamId, profile.id);
 
         const results: TeamInviteCreateResult[] = [];
+        const seenEmails = new Set<string>();
 
         for (const rawEmail of input.emails) {
+          const trimmedEmail = rawEmail.trim();
           const normalizedEmail = normalizeEmail(rawEmail);
 
           if (!normalizedEmail) {
@@ -534,12 +560,76 @@ export function createBondifyServices(context: ServiceContext) {
             continue;
           }
 
+          if (!isValidEmail(normalizedEmail)) {
+            results.push({
+              email: trimmedEmail,
+              normalizedEmail,
+              ok: false,
+              invite: null,
+              errorCode: "INVALID_INVITE_EMAIL",
+              errorMessage: "Enter a valid email address.",
+            });
+            continue;
+          }
+
+          if (normalizedEmail === profile.normalizedEmail) {
+            results.push({
+              email: trimmedEmail,
+              normalizedEmail,
+              ok: false,
+              invite: null,
+              errorCode: "SELF_INVITE",
+              errorMessage: "You are already on this account. Invite a teammate instead.",
+            });
+            continue;
+          }
+
+          if (seenEmails.has(normalizedEmail)) {
+            results.push({
+              email: trimmedEmail,
+              normalizedEmail,
+              ok: false,
+              invite: null,
+              errorCode: "DUPLICATE_INVITE",
+              errorMessage: "This email appears more than once in the same invite batch.",
+            });
+            continue;
+          }
+
+          seenEmails.add(normalizedEmail);
+
+          const { data: existingMembership, error: membershipLookupError } = await supabase
+            .from("team_memberships")
+            .select("id, profile:profiles!inner(normalized_email)")
+            .eq("team_id", input.teamId)
+            .eq("profile.normalized_email", normalizedEmail)
+            .limit(1);
+
+          if (membershipLookupError) {
+            throw new BondifyServiceError("TEAM_ACCESS_DENIED", membershipLookupError.message, {
+              teamId: input.teamId,
+              normalizedEmail,
+            });
+          }
+
+          if (existingMembership.length > 0) {
+            results.push({
+              email: trimmedEmail,
+              normalizedEmail,
+              ok: false,
+              invite: null,
+              errorCode: "ALREADY_TEAM_MEMBER",
+              errorMessage: "That teammate is already an active member of this team.",
+            });
+            continue;
+          }
+
           const { data, error } = await supabase
             .from("team_invites")
             .insert({
               team_id: input.teamId,
               inviter_profile_id: profile.id,
-              email: rawEmail.trim(),
+              email: trimmedEmail,
               normalized_email: normalizedEmail,
               status: "pending",
             })
@@ -562,7 +652,7 @@ export function createBondifyServices(context: ServiceContext) {
             );
 
             results.push({
-              email: rawEmail.trim(),
+              email: trimmedEmail,
               normalizedEmail,
               ok: false,
               invite: null,
@@ -681,20 +771,30 @@ export function createBondifyServices(context: ServiceContext) {
 
         const updatedInviteRow: TeamInviteRow = updatedInvite;
 
-        const { data: membership, error: membershipError } = await supabase
-          .from("team_memberships")
-          .insert({
-            team_id: updatedInviteRow.team_id,
-            profile_id: profile.id,
-          })
-          .select("id, team_id, profile_id, created_at")
-          .single();
+        const { error: membershipError } = await supabase.from("team_memberships").insert({
+          team_id: updatedInviteRow.team_id,
+          profile_id: profile.id,
+        });
 
         if (membershipError) {
           throw mapDuplicateInsertError(
             membershipError,
             duplicateMembershipError(updatedInviteRow.team_id, profile.id),
           );
+        }
+
+        const { data: membership, error: createdMembershipError } = await supabase
+          .from("team_memberships")
+          .select("id, team_id, profile_id, created_at")
+          .eq("team_id", updatedInviteRow.team_id)
+          .eq("profile_id", profile.id)
+          .single();
+
+        if (createdMembershipError) {
+          throw new BondifyServiceError("TEAM_ACCESS_DENIED", createdMembershipError.message, {
+            teamId: updatedInviteRow.team_id,
+            profileId: profile.id,
+          });
         }
 
         return {

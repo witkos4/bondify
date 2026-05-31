@@ -1,8 +1,9 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import Topbar from "@/components/Topbar.astro";
+import { consumeDashboardFlash } from "@/lib/dashboard-flash";
 import { callBondifyService, createBondifyServices } from "@/lib/services/bondify";
-import type { TeamSummary, TeamInviteView } from "@/types";
+import type { TeamInviteCreateResult, TeamSummary, TeamInviteView } from "@/types";
 
 const { user } = Astro.locals;
 const services = createBondifyServices({
@@ -17,6 +18,7 @@ const [teamSummariesResult, incomingInvitesResult] = await Promise.all([
 
 const teamSummaries: TeamSummary[] = teamSummariesResult.data ?? [];
 const incomingInvites: TeamInviteView[] = incomingInvitesResult.data ?? [];
+const dashboardFlash = consumeDashboardFlash(Astro.cookies);
 const selectedTeamId = Astro.url.searchParams.get("team");
 let selectedTeam: TeamSummary | null = null;
 
@@ -29,9 +31,36 @@ const activeTeamName = selectedTeam ? selectedTeam.team.name : "No active team s
 const activeTeamMemberCount = selectedTeam ? selectedTeam.memberships.length : 0;
 const activeTeamPendingInviteCount = selectedTeam ? selectedTeam.pendingInvites.length : 0;
 const activeTeamId = selectedTeam ? selectedTeam.team.id : "";
+const inviteFlash = dashboardFlash?.type === "invite-results" ? dashboardFlash : null;
+const teamCreatedFlash = dashboardFlash?.type === "team-created" ? dashboardFlash : null;
+const teamCreateErrorFlash = dashboardFlash?.type === "team-create-error" ? dashboardFlash : null;
+const createTeamInputValue = teamCreateErrorFlash?.teamName ?? "";
+const inviteTextareaValue = inviteFlash?.teamId === activeTeamId ? inviteFlash.submittedEmails.join("\n") : "";
+const inviteResults: TeamInviteCreateResult[] = inviteFlash?.teamId === activeTeamId ? inviteFlash.results : [];
+const inviteResultSuccessCount = inviteResults.filter((result) => result.ok).length;
+const inviteResultFailureCount = inviteResults.length - inviteResultSuccessCount;
 
 function formatInviteLabel(invite: TeamInviteView) {
   return `Pending invite for ${invite.invite.email} to join team ${invite.invite.teamId}.`;
+}
+
+function formatInviteResultTitle(result: TeamInviteCreateResult) {
+  if (result.ok) {
+    return "Invite created";
+  }
+
+  switch (result.errorCode) {
+    case "ALREADY_TEAM_MEMBER":
+      return "Already a member";
+    case "SELF_INVITE":
+      return "This is your email";
+    case "DUPLICATE_INVITE":
+      return "Duplicate invite";
+    case "INVALID_INVITE_EMAIL":
+      return "Invalid email";
+    default:
+      return "Needs attention";
+  }
 }
 ---
 
@@ -109,8 +138,8 @@ function formatInviteLabel(invite: TeamInviteView) {
                     <p class="text-xs font-semibold tracking-[0.25em] text-amber-100/70 uppercase">First milestone</p>
                     <h2 class="mt-2 text-2xl font-semibold">No teams yet</h2>
                     <p class="mt-2 text-sm leading-6 text-amber-50/75">
-                      This empty state replaces the old placeholder dashboard. Team creation is the next step in this
-                      change and will plug into this shell in Phase 2.
+                      This empty state replaces the old placeholder dashboard. You can create your first team here now,
+                      then use the same shell to invite teammates and manage the roster.
                     </p>
                     <a
                       href="#create-team-next"
@@ -213,24 +242,127 @@ function formatInviteLabel(invite: TeamInviteView) {
               </div>
 
               <div class="space-y-6">
+                <section class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
+                  <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Invite teammates</p>
+                  <h2 class="mt-2 text-2xl font-semibold">Bring the team together</h2>
+                  <p class="mt-3 text-sm leading-6 text-blue-100/65">
+                    Any active member of this team can invite several teammates at once. Valid rows succeed even if some
+                    others need correction.
+                  </p>
+
+                  <form method="POST" action="/api/teams/invite" class="mt-5 space-y-4">
+                    <input type="hidden" name="teamId" value={activeTeamId} />
+                    <div>
+                      <label class="block text-sm font-medium text-blue-100/75" for="invite-emails">
+                        Emails
+                      </label>
+                      <textarea
+                        id="invite-emails"
+                        name="emails"
+                        rows="6"
+                        placeholder={`alex@example.com\njamie@example.com\npat@example.com`}
+                        class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
+                      >
+                        {inviteTextareaValue}
+                      </textarea>
+                      <p class="mt-2 text-xs leading-5 text-blue-100/50">
+                        Add one email per line. Commas work too if you prefer pasting from a list.
+                      </p>
+                    </div>
+                    <button
+                      type="submit"
+                      class="w-full rounded-2xl bg-cyan-400/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                    >
+                      Send invites
+                    </button>
+                  </form>
+
+                  {inviteFlash?.teamId === activeTeamId && (
+                    <div class="mt-5 rounded-3xl border border-white/10 bg-slate-950/30 p-4">
+                      <p class="text-sm font-semibold text-white">{inviteFlash.message}</p>
+                      <p class="mt-1 text-xs text-blue-100/55">
+                        {inviteResultSuccessCount} created
+                        {" · "}
+                        {inviteResultFailureCount} need attention
+                      </p>
+
+                      {inviteResults.length > 0 ? (
+                        <div class="mt-4 space-y-3">
+                          {inviteResults.map((result) => (
+                            <div
+                              class:list={[
+                                "rounded-2xl border px-4 py-3 text-sm",
+                                result.ok
+                                  ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100"
+                                  : "border-red-500/30 bg-red-900/40 text-red-200",
+                              ]}
+                            >
+                              <div class="flex items-start justify-between gap-3">
+                                <div>
+                                  <p class="font-semibold">{result.email}</p>
+                                  <p class="mt-1 text-xs opacity-80">{formatInviteResultTitle(result)}</p>
+                                </div>
+                                <span class="text-xs font-semibold tracking-[0.2em] uppercase">
+                                  {result.ok ? "Created" : "Fix needed"}
+                                </span>
+                              </div>
+                              {!result.ok && result.errorMessage && (
+                                <p class="mt-2 text-xs leading-5 opacity-90">{result.errorMessage}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p class="mt-4 text-sm text-red-200/80">{inviteFlash.message}</p>
+                      )}
+                    </div>
+                  )}
+                </section>
+
                 <section
                   id="create-team-next"
                   class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8"
                 >
-                  <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Next in Phase 2</p>
-                  <h2 class="mt-2 text-2xl font-semibold">Create or grow a team</h2>
+                  <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Create another team</p>
+                  <h2 class="mt-2 text-2xl font-semibold">Start a new team without leaving the dashboard</h2>
                   <p class="mt-3 text-sm leading-6 text-blue-100/65">
-                    This shell is ready for team creation and batch invite actions. The actual forms arrive in the next
-                    phase so they can bind directly to the foundation service layer.
+                    Multi-team support is real in this slice, so you can create another group here and switch to it from
+                    the same active-team dropdown.
                   </p>
-                  <div class="mt-5 rounded-3xl border border-dashed border-white/15 bg-slate-950/25 p-4 text-sm text-blue-100/60">
-                    Planned next actions:
-                    <ul class="mt-3 space-y-2">
-                      <li>Team creation from empty and populated states</li>
-                      <li>Batch teammate invite form with row-level feedback</li>
-                      <li>Invite permissions for any active member of the selected team</li>
-                    </ul>
-                  </div>
+
+                  {teamCreatedFlash && (
+                    <div class="mt-5 rounded-3xl border border-emerald-300/25 bg-emerald-300/10 p-4 text-sm leading-6 text-emerald-100">
+                      {teamCreatedFlash.message}
+                    </div>
+                  )}
+
+                  {teamCreateErrorFlash && (
+                    <div class="mt-5 rounded-3xl border border-red-500/30 bg-red-900/40 p-4 text-sm leading-6 text-red-300">
+                      {teamCreateErrorFlash.message}
+                    </div>
+                  )}
+
+                  <form method="POST" action="/api/teams/create" class="mt-5 space-y-4">
+                    <div>
+                      <label class="block text-sm font-medium text-blue-100/75" for="team-name">
+                        Team name
+                      </label>
+                      <input
+                        id="team-name"
+                        name="teamName"
+                        type="text"
+                        value={createTeamInputValue}
+                        placeholder="Remote Icebreakers"
+                        class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      class="w-full rounded-2xl border border-cyan-300/25 bg-cyan-400/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                    >
+                      Create another team
+                    </button>
+                  </form>
                 </section>
 
                 <section class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
@@ -260,17 +392,35 @@ function formatInviteLabel(invite: TeamInviteView) {
                 <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Create-team affordance</p>
                 <h2 class="mt-2 text-3xl font-semibold">Start your first Bondify team here</h2>
                 <p class="mt-3 max-w-2xl text-sm leading-7 text-blue-100/70">
-                  The placeholder dashboard is gone. This panel marks the exact space where team creation will land in
-                  Phase 2, so first-time users already have a clear path instead of a dead-end authenticated page.
+                  The placeholder dashboard is gone. Create your first team from this page, and Bondify will promote it
+                  into the active-team view immediately.
                 </p>
-                <div class="mt-6 rounded-[1.75rem] border border-dashed border-cyan-200/20 bg-slate-950/25 p-5">
-                  <p class="text-sm font-medium text-white">What Phase 2 adds here</p>
-                  <ul class="mt-3 space-y-2 text-sm leading-6 text-blue-100/60">
-                    <li>A real team creation form wired to the foundation service</li>
-                    <li>Immediate promotion of the new team into active team context</li>
-                    <li>Space for batch invite entry once the first team exists</li>
-                  </ul>
-                </div>
+                {teamCreateErrorFlash && (
+                  <div class="mt-6 rounded-3xl border border-red-500/30 bg-red-900/40 p-4 text-sm leading-6 text-red-300">
+                    {teamCreateErrorFlash.message}
+                  </div>
+                )}
+                <form method="POST" action="/api/teams/create" class="mt-6 space-y-4">
+                  <div>
+                    <label class="block text-sm font-medium text-blue-100/75" for="empty-team-name">
+                      Team name
+                    </label>
+                    <input
+                      id="empty-team-name"
+                      name="teamName"
+                      type="text"
+                      value={createTeamInputValue}
+                      placeholder="Friday Ritual Crew"
+                      class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    class="inline-flex rounded-2xl bg-cyan-400/90 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                  >
+                    Create team
+                  </button>
+                </form>
               </div>
 
               <div class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
@@ -278,8 +428,8 @@ function formatInviteLabel(invite: TeamInviteView) {
                 <h2 class="mt-2 text-2xl font-semibold">Foundation is connected</h2>
                 <ul class="mt-4 space-y-3 text-sm leading-6 text-blue-100/65">
                   <li>Your authenticated profile is loaded from the Bondify service layer.</li>
-                  <li>This page already checks for memberships and matching incoming invites on the server.</li>
-                  <li>The same shell will expand into team creation, invites, and acceptance over the next phases.</li>
+                  <li>Creating your first team immediately unlocks the shared roster and invite actions.</li>
+                  <li>The same shell will expand into invite acceptance in the next phase.</li>
                 </ul>
               </div>
             </section>
