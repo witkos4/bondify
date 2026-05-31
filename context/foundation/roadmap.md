@@ -22,7 +22,7 @@ The north star here means the smallest user-visible milestone that proves the pr
 | ID | Change ID | Outcome | Prerequisites | PRD refs | Status |
 | --- | --- | --- | --- | --- | --- |
 | F-01 | team-and-game-data-foundation | Teams, memberships, game rounds, anonymous responses, and 30-day history storage exist with privacy rules enforced. | — | FR-002, FR-003, FR-005, FR-007, US-01 | ready |
-| S-01 | auth-and-team-setup | A signed-in user can create a team, use a visible email identity for teammate setup, add teammates, and see members join the team space. | F-01 | FR-001, FR-002, FR-003, US-01 | proposed |
+| S-01 | auth-and-team-setup | A signed-in user can create a team, use a visible email identity for teammate setup, add teammates, and see members join the team space. | F-01 | FR-001, FR-002, FR-003, US-01 | implemented |
 | S-02 | game-round-and-anonymous-submission | Any team member can open one micro-game and each teammate can submit exactly one anonymous response without a separate session flow. | S-01 | FR-004, FR-005, US-01 | proposed |
 | S-03 | shared-reveal-results | Participants see one shared results screen with every submitted response once the round ends. | S-02 | FR-006, US-01 | proposed |
 | S-04 | selected-game-history | Selected games leave a simple 30-day team history that the team owner can clear. | S-03 | FR-007, US-01 | proposed |
@@ -64,7 +64,7 @@ Parallel with: —
 Blockers: —
 Unknowns: —
 Risk: This is sequenced first because the chosen speed strategy needs a usable multi-user entry path before deeper gameplay work can be validated with real teams.
-Status: proposed
+Status: implemented
 
 ### S-02: Game round and anonymous submission
 
@@ -109,7 +109,7 @@ Status: proposed
 | Roadmap ID | Change ID | Outcome | Status |
 | --- | --- | --- | --- |
 | F-01 | team-and-game-data-foundation | Teams, memberships, game rounds, anonymous responses, and 30-day history storage exist with privacy rules enforced. | ready |
-| S-01 | auth-and-team-setup | A signed-in user can create a team, use a visible email identity for teammate setup, add teammates, and see members join the team space. | proposed |
+| S-01 | auth-and-team-setup | A signed-in user can create a team, use a visible email identity for teammate setup, add teammates, and see members join the team space. | implemented |
 | S-02 | game-round-and-anonymous-submission | Any team member can open one micro-game and each teammate can submit exactly one anonymous response without a separate session flow. | proposed |
 | S-03 | shared-reveal-results | Participants see one shared results screen with every submitted response once the round ends. | proposed |
 | S-04 | selected-game-history | Selected games leave a simple 30-day team history that the team owner can clear. | proposed |
@@ -130,4 +130,4 @@ Status: proposed
 
 ## Done
 
-- None yet.
+- S-01: Auth and team setup is implemented and verified in the deployed version.

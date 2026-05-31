@@ -303,8 +303,8 @@ Complete the team setup milestone by allowing invited users to explicitly accept
 #### Manual
 
 - [x] 2.3 Team creation verified from dashboard
-- [ ] 2.4 Combined roster verified for members and pending invites
-- [ ] 2.5 Partial-success batch invite handling verified with row-level errors
+- [x] 2.4 Combined roster verified for members and pending invites
+- [x] 2.5 Partial-success batch invite handling verified with row-level errors
 
 ### Phase 3: Invite acceptance and end-to-end milestone verification
 
@@ -316,5 +316,5 @@ Complete the team setup milestone by allowing invited users to explicitly accept
 #### Manual
 
 - [x] 3.3 Matching pending invite visibility verified for invited user
-- [ ] 3.4 Explicit invite acceptance verified
-- [ ] 3.5 Two-account happy path verified end to end
+- [x] 3.4 Explicit invite acceptance verified
+- [x] 3.5 Two-account happy path verified end to end
