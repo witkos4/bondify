@@ -7,6 +7,7 @@ import type {
   BondifyGameResponseRecord,
   BondifyGameRound,
   BondifyGameTemplate,
+  BondifyGameTemplateProjection,
   BondifyProfile,
   BondifyServiceResponse,
   BondifyTeam,
@@ -14,6 +15,7 @@ import type {
   BondifyTeamMembership,
   ParticipantSafeHistoryEntry,
   ParticipantSafeRoundReveal,
+  TeamGameState,
   TeamInviteCreateResult,
   TeamInviteView,
   TeamRosterEntry,
@@ -121,6 +123,10 @@ interface GameRoundWithTemplateRow extends GameRoundRow {
   game_responses: GameResponseRow[];
 }
 
+interface ActiveGameRoundRow extends GameRoundRow {
+  game_responses: Pick<GameResponseRow, "id" | "membership_id">[];
+}
+
 interface HistoryEntryRow extends GameRoundRow {
   game_template: TemplateProjectionRow;
   game_responses: GameResponseRow[];
@@ -130,6 +136,8 @@ interface SupabaseLikeError {
   code?: string;
   message?: string;
 }
+
+const MAX_RESPONSE_TEXT_LENGTH = 500;
 
 export class BondifyServiceError extends Error {
   readonly code: BondifyDomainErrorCode;
@@ -229,6 +237,16 @@ function toTemplateProjection(row: TemplateProjectionRow) {
   };
 }
 
+function toGameTemplateProjection(row: TemplateProjectionRow): BondifyGameTemplateProjection {
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    prompt: row.prompt,
+    isHistoryEnabled: row.is_history_enabled,
+  };
+}
+
 function toRound(row: GameRoundRow): BondifyGameRound {
   return {
     id: row.id,
@@ -262,6 +280,31 @@ function toParticipantSafeResponses(rows: GameResponseRow[]) {
     responseText: row.response_text,
     createdAt: row.created_at,
   }));
+}
+
+function toTeamGameState(input: {
+  teamId: string;
+  membership: TeamMembershipRow;
+  template: TemplateProjectionRow;
+  activeRound: ActiveGameRoundRow | null;
+}): TeamGameState {
+  const activeRound = input.activeRound;
+  const currentMemberResponse =
+    activeRound?.game_responses.find((response) => response.membership_id === input.membership.id) ?? null;
+
+  return {
+    teamId: input.teamId,
+    membership: toMembership(input.membership),
+    template: toGameTemplateProjection(input.template),
+    activeRound: activeRound
+      ? {
+          round: toRound(activeRound),
+          submittedResponseCount: activeRound.game_responses.length,
+          hasCurrentMemberSubmitted: currentMemberResponse !== null,
+          currentMemberResponseId: currentMemberResponse?.id ?? null,
+        }
+      : null,
+  };
 }
 
 function duplicateMembershipError(teamId: string, profileId: string) {
@@ -439,6 +482,104 @@ async function listTeamSummaryRows(supabase: SupabaseServerClient): Promise<Team
   }
 
   return data as TeamSummaryRow[];
+}
+
+async function getTemplateBySlug(supabase: SupabaseServerClient, gameSlug: string): Promise<TemplateProjectionRow> {
+  const slug = gameSlug.trim();
+  if (!slug) {
+    throw new BondifyServiceError("INVALID_GAME_TEMPLATE", "Choose a valid game template.");
+  }
+
+  const { data, error } = await supabase
+    .from("game_templates")
+    .select("id, slug, name, prompt, is_history_enabled")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (error) {
+    throw new BondifyServiceError("INVALID_GAME_TEMPLATE", error.message, { gameSlug: slug });
+  }
+
+  if (!data) {
+    throw new BondifyServiceError("INVALID_GAME_TEMPLATE", "Game template not found.", { gameSlug: slug });
+  }
+
+  return data;
+}
+
+async function getActiveGameRound(
+  supabase: SupabaseServerClient,
+  input: { teamId: string; gameTemplateId: string },
+): Promise<ActiveGameRoundRow | null> {
+  const { data, error } = await supabase
+    .from("game_rounds")
+    .select(
+      `
+        id,
+        team_id,
+        game_template_id,
+        opened_by_profile_id,
+        status,
+        revealed_at,
+        history_visible_until,
+        history_cleared_at,
+        created_at,
+        updated_at,
+        game_responses (
+          id,
+          membership_id
+        )
+      `,
+    )
+    .eq("team_id", input.teamId)
+    .eq("game_template_id", input.gameTemplateId)
+    .eq("status", "open")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new BondifyServiceError("ROUND_NOT_FOUND", error.message, input);
+  }
+
+  return data;
+}
+
+async function loadTeamGameState(
+  supabase: SupabaseServerClient,
+  input: { teamId: string; gameSlug: string; profileId: string },
+): Promise<TeamGameState> {
+  const membership = await requireMembershipAccess(supabase, input.teamId, input.profileId);
+  const template = await getTemplateBySlug(supabase, input.gameSlug);
+  const activeRound = await getActiveGameRound(supabase, {
+    teamId: input.teamId,
+    gameTemplateId: template.id,
+  });
+
+  return toTeamGameState({
+    teamId: input.teamId,
+    membership,
+    template,
+    activeRound,
+  });
+}
+
+function validateResponseText(responseText: string): string {
+  const trimmedResponseText = responseText.trim();
+
+  if (!trimmedResponseText) {
+    throw new BondifyServiceError("INVALID_RESPONSE_TEXT", "Response text cannot be blank.");
+  }
+
+  if (trimmedResponseText.length > MAX_RESPONSE_TEXT_LENGTH) {
+    throw new BondifyServiceError(
+      "INVALID_RESPONSE_TEXT",
+      `Response text must be ${MAX_RESPONSE_TEXT_LENGTH} characters or fewer.`,
+      { maxLength: MAX_RESPONSE_TEXT_LENGTH },
+    );
+  }
+
+  return trimmedResponseText;
 }
 
 export function createBondifyServices(context: ServiceContext) {
@@ -819,6 +960,49 @@ export function createBondifyServices(context: ServiceContext) {
       });
     },
 
+    async getTeamGameState(input: { teamId: string; gameSlug: string }): Promise<TeamGameState> {
+      return withCurrentProfile(async (supabase, profile) =>
+        loadTeamGameState(supabase, {
+          teamId: input.teamId,
+          gameSlug: input.gameSlug,
+          profileId: profile.id,
+        }),
+      );
+    },
+
+    async startTeamGameRound(input: { teamId: string; gameSlug: string }): Promise<TeamGameState> {
+      return withCurrentProfile(async (supabase, profile) => {
+        const currentState = await loadTeamGameState(supabase, {
+          teamId: input.teamId,
+          gameSlug: input.gameSlug,
+          profileId: profile.id,
+        });
+
+        if (currentState.activeRound) {
+          return currentState;
+        }
+
+        const { error } = await supabase.from("game_rounds").insert({
+          team_id: input.teamId,
+          game_template_id: currentState.template.id,
+          opened_by_profile_id: profile.id,
+        });
+
+        if (error && error.code !== "23505") {
+          throw new BondifyServiceError("ROUND_NOT_FOUND", error.message, {
+            teamId: input.teamId,
+            gameSlug: input.gameSlug,
+          });
+        }
+
+        return loadTeamGameState(supabase, {
+          teamId: input.teamId,
+          gameSlug: input.gameSlug,
+          profileId: profile.id,
+        });
+      });
+    },
+
     async createRound(input: {
       teamId: string;
       gameTemplateId: string;
@@ -853,10 +1037,7 @@ export function createBondifyServices(context: ServiceContext) {
       membershipId: string;
       responseText: string;
     }): Promise<BondifyGameResponseRecord> {
-      const responseText = input.responseText.trim();
-      if (!responseText) {
-        throw new BondifyServiceError("ROUND_NOT_OPEN", "Response text cannot be blank.");
-      }
+      const responseText = validateResponseText(input.responseText);
 
       return withCurrentProfile(async (supabase, profile) => {
         const { data: createdResponse, error } = await supabase
@@ -878,6 +1059,74 @@ export function createBondifyServices(context: ServiceContext) {
               membershipId: input.membershipId,
             }),
           );
+        }
+
+        return toResponseRecord(createdResponse);
+      });
+    },
+
+    async submitCurrentMemberResponse(input: {
+      roundId: string;
+      responseText: string;
+    }): Promise<BondifyGameResponseRecord> {
+      const responseText = validateResponseText(input.responseText);
+
+      return withCurrentProfile(async (supabase, profile) => {
+        const { data: round, error: roundError } = await supabase
+          .from("game_rounds")
+          .select(
+            "id, team_id, game_template_id, opened_by_profile_id, status, revealed_at, history_visible_until, history_cleared_at, created_at, updated_at",
+          )
+          .eq("id", input.roundId)
+          .maybeSingle();
+
+        if (roundError) {
+          throw new BondifyServiceError("ROUND_NOT_FOUND", roundError.message, { roundId: input.roundId });
+        }
+
+        if (!round) {
+          throw new BondifyServiceError("ROUND_NOT_FOUND", "Round not found.", { roundId: input.roundId });
+        }
+
+        const roundRow: GameRoundRow = round;
+        if (roundRow.status !== "open") {
+          throw new BondifyServiceError("ROUND_NOT_OPEN", "This game is not accepting responses.", {
+            roundId: input.roundId,
+          });
+        }
+
+        const membership = await requireMembershipAccess(supabase, roundRow.team_id, profile.id);
+        const responseId = crypto.randomUUID();
+
+        const { error: insertError } = await supabase.from("game_responses").insert({
+          id: responseId,
+          round_id: input.roundId,
+          membership_id: membership.id,
+          profile_id: profile.id,
+          response_text: responseText,
+        });
+
+        if (insertError) {
+          throw mapDuplicateInsertError(
+            insertError,
+            new BondifyServiceError("DUPLICATE_RESPONSE", "Only one response per participant is allowed.", {
+              roundId: input.roundId,
+              membershipId: membership.id,
+            }),
+          );
+        }
+
+        const { data: createdResponse, error: createdResponseError } = await supabase
+          .from("game_responses")
+          .select("id, round_id, membership_id, profile_id, response_text, created_at")
+          .eq("id", responseId)
+          .single();
+
+        if (createdResponseError) {
+          throw new BondifyServiceError("ROUND_NOT_FOUND", createdResponseError.message, {
+            roundId: input.roundId,
+            responseId,
+          });
         }
 
         return toResponseRecord(createdResponse);
