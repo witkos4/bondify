@@ -2,7 +2,7 @@
 id: game-round-and-anonymous-submission
 roadmap_id: S-02
 title: Game round and anonymous submission
-status: implementing
+status: implemented
 created: 2026-06-01
 updated: 2026-06-01
 ---

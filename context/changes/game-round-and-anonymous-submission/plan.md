@@ -321,9 +321,9 @@ Wire the playable game flow into the existing dashboard and verify it with real 
 
 #### Manual
 
-- [ ] 1.4 Starting the same game twice preserves one active open round
-- [ ] 1.5 Non-member access to a team game is denied
-- [ ] 1.6 Duplicate current-member submission maps to a friendly outcome
+- [x] 1.4 Starting the same game twice preserves one active open round — aaa4b78
+- [x] 1.5 Non-member access to a team game is denied — aaa4b78
+- [x] 1.6 Duplicate current-member submission maps to a friendly outcome — aaa4b78
 
 ### Phase 2: Team-scoped game page and API routes
 
@@ -344,14 +344,14 @@ Wire the playable game flow into the existing dashboard and verify it with real 
 
 #### Automated
 
-- [x] 3.1 Lint passes with dashboard integration
-- [x] 3.2 Build passes with final S-02 behavior
+- [x] 3.1 Lint passes with dashboard integration — c4c5392
+- [x] 3.2 Build passes with final S-02 behavior — c4c5392
 
 #### Manual
 
-- [x] 3.3 Selected-team dashboard shows seeded game templates
-- [x] 3.4 User A can start a game and submit once
-- [x] 3.5 User B can open the same team/game and submit once
-- [x] 3.6 Submitted users see waiting state and anonymous count
-- [x] 3.7 No response content or responder identity is visible before S-03
-- [x] 3.8 Existing S-01 setup flows still work
+- [x] 3.3 Selected-team dashboard shows seeded game templates — c4c5392
+- [x] 3.4 User A can start a game and submit once — c4c5392
+- [x] 3.5 User B can open the same team/game and submit once — c4c5392
+- [x] 3.6 Submitted users see waiting state and anonymous count — c4c5392
+- [x] 3.7 No response content or responder identity is visible before S-03 — c4c5392
+- [x] 3.8 Existing S-01 setup flows still work — c4c5392
