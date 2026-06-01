@@ -3,7 +3,7 @@ import Layout from "@/layouts/Layout.astro";
 import Topbar from "@/components/Topbar.astro";
 import { consumeDashboardFlash } from "@/lib/dashboard-flash";
 import { callBondifyService, createBondifyServices } from "@/lib/services/bondify";
-import type { TeamInviteCreateResult, TeamSummary, TeamInviteView } from "@/types";
+import type { BondifyGameTemplate, TeamInviteCreateResult, TeamSummary, TeamInviteView } from "@/types";
 
 const { user } = Astro.locals;
 const services = createBondifyServices({
@@ -11,13 +11,15 @@ const services = createBondifyServices({
   cookies: Astro.cookies,
 });
 
-const [teamSummariesResult, incomingInvitesResult] = await Promise.all([
+const [teamSummariesResult, incomingInvitesResult, gameTemplatesResult] = await Promise.all([
   callBondifyService(() => services.getCurrentTeamSummaries()),
   callBondifyService(() => services.listPendingInvitesForCurrentProfile()),
+  callBondifyService(() => services.listGameTemplates()),
 ]);
 
 const teamSummaries: TeamSummary[] = teamSummariesResult.data ?? [];
 const incomingInvites: TeamInviteView[] = incomingInvitesResult.data ?? [];
+const gameTemplates: BondifyGameTemplate[] = gameTemplatesResult.data ?? [];
 const dashboardFlash = consumeDashboardFlash(Astro.cookies);
 const selectedTeamId = Astro.url.searchParams.get("team");
 let selectedTeam: TeamSummary | null = null;
@@ -43,6 +45,7 @@ const inviteTextareaValue = inviteFlash?.teamId === activeTeamId ? inviteFlash.s
 const inviteResults: TeamInviteCreateResult[] = inviteFlash?.teamId === activeTeamId ? inviteFlash.results : [];
 const inviteResultSuccessCount = inviteResults.filter((result) => result.ok).length;
 const inviteResultFailureCount = inviteResults.length - inviteResultSuccessCount;
+const gameTemplatesErrorMessage = gameTemplatesResult.error?.message ?? null;
 
 function formatInviteLabel(invite: TeamInviteView) {
   return `Pending invite for ${invite.invite.email} to join team ${invite.invite.teamId}.`;
@@ -65,6 +68,10 @@ function formatInviteResultTitle(result: TeamInviteCreateResult) {
     default:
       return "Needs attention";
   }
+}
+
+function gameHref(teamId: string, gameSlug: string) {
+  return `/teams/${encodeURIComponent(teamId)}/games/${encodeURIComponent(gameSlug)}`;
 }
 ---
 
@@ -223,196 +230,245 @@ function formatInviteResultTitle(result: TeamInviteCreateResult) {
 
         {
           selectedTeam !== null ? (
-            <section class="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-              <div class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
-                <div class="flex items-end justify-between gap-4">
-                  <div>
-                    <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Roster</p>
-                    <h2 class="mt-2 text-3xl font-semibold">{selectedTeam.team.name}</h2>
-                    <p class="mt-2 text-sm leading-6 text-blue-100/65">
-                      Active members and pending invites already share one surface so later invite management can slot
-                      in without changing the mental model.
+            <div class="space-y-6">
+              <section class="rounded-[2rem] border border-white/12 bg-slate-950/35 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
+                <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                  <div class="max-w-2xl">
+                    <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Micro-games</p>
+                    <h2 class="mt-2 text-3xl font-semibold">Choose a game for {selectedTeam.team.name}</h2>
+                    <p class="mt-3 text-sm leading-6 text-blue-100/65">
+                      Open a team-scoped game page, then start the active round when your team is ready to submit.
                     </p>
                   </div>
-                  <div class="rounded-3xl border border-white/10 bg-slate-950/35 px-4 py-3 text-right">
-                    <p class="text-xs tracking-[0.2em] text-blue-100/45 uppercase">Selected team</p>
-                    <p class="mt-1 text-lg font-semibold text-white">{selectedTeam.team.name}</p>
+                  <div class="rounded-3xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-blue-100/65">
+                    {gameTemplates.length} available game{gameTemplates.length === 1 ? "" : "s"}
                   </div>
                 </div>
 
-                <div class="mt-8 grid gap-4">
-                  {selectedTeam.memberships.map((entry) => (
-                    <article class="rounded-3xl border border-white/10 bg-slate-950/25 px-5 py-4">
-                      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <p class="text-lg font-medium text-white">{entry.profile.email}</p>
-                          <p class="mt-1 text-sm text-blue-100/55">Member since {entry.membership.createdAt}</p>
-                        </div>
-                        <span class="inline-flex rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 text-xs font-semibold tracking-[0.2em] text-emerald-100 uppercase">
-                          Active member
-                        </span>
-                      </div>
-                    </article>
-                  ))}
+                {gameTemplatesErrorMessage && (
+                  <div class="mt-5 rounded-3xl border border-red-500/30 bg-red-900/40 p-4 text-sm leading-6 text-red-300">
+                    {gameTemplatesErrorMessage}
+                  </div>
+                )}
 
-                  {selectedTeam.pendingInvites.map((invite) => (
-                    <article class="rounded-3xl border border-dashed border-cyan-200/20 bg-cyan-200/6 px-5 py-4">
-                      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <p class="text-lg font-medium text-white">{invite.invite.email}</p>
-                          <p class="mt-1 text-sm text-blue-100/55">Invite pending for this team</p>
+                {gameTemplates.length > 0 ? (
+                  <div class="mt-6 grid gap-4 md:grid-cols-3">
+                    {gameTemplates.map((template) => (
+                      <article class="flex min-h-52 flex-col rounded-3xl border border-white/10 bg-white/6 p-5">
+                        <p class="text-xs font-semibold tracking-[0.2em] text-cyan-100/60 uppercase">
+                          {template.isHistoryEnabled ? "History-ready" : "Live only"}
+                        </p>
+                        <h3 class="mt-3 text-xl font-semibold text-white">{template.name}</h3>
+                        <p class="mt-3 flex-1 text-sm leading-6 text-blue-100/65">{template.prompt}</p>
+                        <a
+                          href={gameHref(activeTeamId, template.slug)}
+                          class="mt-5 inline-flex justify-center rounded-2xl bg-cyan-400/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                        >
+                          Open game
+                        </a>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p class="mt-5 rounded-3xl border border-white/10 bg-white/6 p-4 text-sm leading-6 text-blue-100/65">
+                    No game templates are available yet.
+                  </p>
+                )}
+              </section>
+
+              <section class="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+                <div class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
+                  <div class="flex items-end justify-between gap-4">
+                    <div>
+                      <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Roster</p>
+                      <h2 class="mt-2 text-3xl font-semibold">{selectedTeam.team.name}</h2>
+                      <p class="mt-2 text-sm leading-6 text-blue-100/65">
+                        Active members and pending invites already share one surface so later invite management can slot
+                        in without changing the mental model.
+                      </p>
+                    </div>
+                    <div class="rounded-3xl border border-white/10 bg-slate-950/35 px-4 py-3 text-right">
+                      <p class="text-xs tracking-[0.2em] text-blue-100/45 uppercase">Selected team</p>
+                      <p class="mt-1 text-lg font-semibold text-white">{selectedTeam.team.name}</p>
+                    </div>
+                  </div>
+
+                  <div class="mt-8 grid gap-4">
+                    {selectedTeam.memberships.map((entry) => (
+                      <article class="rounded-3xl border border-white/10 bg-slate-950/25 px-5 py-4">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p class="text-lg font-medium text-white">{entry.profile.email}</p>
+                            <p class="mt-1 text-sm text-blue-100/55">Member since {entry.membership.createdAt}</p>
+                          </div>
+                          <span class="inline-flex rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 text-xs font-semibold tracking-[0.2em] text-emerald-100 uppercase">
+                            Active member
+                          </span>
                         </div>
-                        <span class="inline-flex rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1 text-xs font-semibold tracking-[0.2em] text-cyan-100 uppercase">
-                          Pending invite
-                        </span>
-                      </div>
-                    </article>
-                  ))}
+                      </article>
+                    ))}
+
+                    {selectedTeam.pendingInvites.map((invite) => (
+                      <article class="rounded-3xl border border-dashed border-cyan-200/20 bg-cyan-200/6 px-5 py-4">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p class="text-lg font-medium text-white">{invite.invite.email}</p>
+                            <p class="mt-1 text-sm text-blue-100/55">Invite pending for this team</p>
+                          </div>
+                          <span class="inline-flex rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1 text-xs font-semibold tracking-[0.2em] text-cyan-100 uppercase">
+                            Pending invite
+                          </span>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <div class="space-y-6">
-                <section class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
-                  <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Invite teammates</p>
-                  <h2 class="mt-2 text-2xl font-semibold">Bring the team together</h2>
-                  <p class="mt-3 text-sm leading-6 text-blue-100/65">
-                    Any active member of this team can invite several teammates at once. Valid rows succeed even if some
-                    others need correction.
-                  </p>
+                <div class="space-y-6">
+                  <section class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
+                    <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Invite teammates</p>
+                    <h2 class="mt-2 text-2xl font-semibold">Bring the team together</h2>
+                    <p class="mt-3 text-sm leading-6 text-blue-100/65">
+                      Any active member of this team can invite several teammates at once. Valid rows succeed even if
+                      some others need correction.
+                    </p>
 
-                  <form method="POST" action="/api/teams/invite" class="mt-5 space-y-4">
-                    <input type="hidden" name="teamId" value={activeTeamId} />
-                    <div>
-                      <label class="block text-sm font-medium text-blue-100/75" for="invite-emails">
-                        Emails
-                      </label>
-                      <textarea
-                        id="invite-emails"
-                        name="emails"
-                        rows="6"
-                        placeholder={`alex@example.com\njamie@example.com\npat@example.com`}
-                        class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
+                    <form method="POST" action="/api/teams/invite" class="mt-5 space-y-4">
+                      <input type="hidden" name="teamId" value={activeTeamId} />
+                      <div>
+                        <label class="block text-sm font-medium text-blue-100/75" for="invite-emails">
+                          Emails
+                        </label>
+                        <textarea
+                          id="invite-emails"
+                          name="emails"
+                          rows="6"
+                          placeholder={`alex@example.com\njamie@example.com\npat@example.com`}
+                          class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
+                        >
+                          {inviteTextareaValue}
+                        </textarea>
+                        <p class="mt-2 text-xs leading-5 text-blue-100/50">
+                          Add one email per line. Commas work too if you prefer pasting from a list.
+                        </p>
+                      </div>
+                      <button
+                        type="submit"
+                        class="w-full rounded-2xl bg-cyan-400/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
                       >
-                        {inviteTextareaValue}
-                      </textarea>
-                      <p class="mt-2 text-xs leading-5 text-blue-100/50">
-                        Add one email per line. Commas work too if you prefer pasting from a list.
-                      </p>
-                    </div>
-                    <button
-                      type="submit"
-                      class="w-full rounded-2xl bg-cyan-400/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
-                    >
-                      Send invites
-                    </button>
-                  </form>
+                        Send invites
+                      </button>
+                    </form>
 
-                  {inviteFlash?.teamId === activeTeamId && (
-                    <div class="mt-5 rounded-3xl border border-white/10 bg-slate-950/30 p-4">
-                      <p class="text-sm font-semibold text-white">{inviteFlash.message}</p>
-                      <p class="mt-1 text-xs text-blue-100/55">
-                        {inviteResultSuccessCount} created
-                        {" · "}
-                        {inviteResultFailureCount} need attention
-                      </p>
+                    {inviteFlash?.teamId === activeTeamId && (
+                      <div class="mt-5 rounded-3xl border border-white/10 bg-slate-950/30 p-4">
+                        <p class="text-sm font-semibold text-white">{inviteFlash.message}</p>
+                        <p class="mt-1 text-xs text-blue-100/55">
+                          {inviteResultSuccessCount} created
+                          {" · "}
+                          {inviteResultFailureCount} need attention
+                        </p>
 
-                      {inviteResults.length > 0 ? (
-                        <div class="mt-4 space-y-3">
-                          {inviteResults.map((result) => (
-                            <div
-                              class:list={[
-                                "rounded-2xl border px-4 py-3 text-sm",
-                                result.ok
-                                  ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100"
-                                  : "border-red-500/30 bg-red-900/40 text-red-200",
-                              ]}
-                            >
-                              <div class="flex items-start justify-between gap-3">
-                                <div>
-                                  <p class="font-semibold">{result.email}</p>
-                                  <p class="mt-1 text-xs opacity-80">{formatInviteResultTitle(result)}</p>
+                        {inviteResults.length > 0 ? (
+                          <div class="mt-4 space-y-3">
+                            {inviteResults.map((result) => (
+                              <div
+                                class:list={[
+                                  "rounded-2xl border px-4 py-3 text-sm",
+                                  result.ok
+                                    ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100"
+                                    : "border-red-500/30 bg-red-900/40 text-red-200",
+                                ]}
+                              >
+                                <div class="flex items-start justify-between gap-3">
+                                  <div>
+                                    <p class="font-semibold">{result.email}</p>
+                                    <p class="mt-1 text-xs opacity-80">{formatInviteResultTitle(result)}</p>
+                                  </div>
+                                  <span class="text-xs font-semibold tracking-[0.2em] uppercase">
+                                    {result.ok ? "Created" : "Fix needed"}
+                                  </span>
                                 </div>
-                                <span class="text-xs font-semibold tracking-[0.2em] uppercase">
-                                  {result.ok ? "Created" : "Fix needed"}
-                                </span>
+                                {!result.ok && result.errorMessage && (
+                                  <p class="mt-2 text-xs leading-5 opacity-90">{result.errorMessage}</p>
+                                )}
                               </div>
-                              {!result.ok && result.errorMessage && (
-                                <p class="mt-2 text-xs leading-5 opacity-90">{result.errorMessage}</p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p class="mt-4 text-sm text-red-200/80">{inviteFlash.message}</p>
-                      )}
-                    </div>
-                  )}
-                </section>
+                            ))}
+                          </div>
+                        ) : (
+                          <p class="mt-4 text-sm text-red-200/80">{inviteFlash.message}</p>
+                        )}
+                      </div>
+                    )}
+                  </section>
 
-                <section
-                  id="create-team-next"
-                  class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8"
-                >
-                  <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Create another team</p>
-                  <h2 class="mt-2 text-2xl font-semibold">Start a new team without leaving the dashboard</h2>
-                  <p class="mt-3 text-sm leading-6 text-blue-100/65">
-                    Multi-team support is real in this slice, so you can create another group here and switch to it from
-                    the same active-team dropdown.
-                  </p>
-
-                  {teamCreatedFlash && (
-                    <div class="mt-5 rounded-3xl border border-emerald-300/25 bg-emerald-300/10 p-4 text-sm leading-6 text-emerald-100">
-                      {teamCreatedFlash.message}
-                    </div>
-                  )}
-
-                  {teamCreateErrorFlash && (
-                    <div class="mt-5 rounded-3xl border border-red-500/30 bg-red-900/40 p-4 text-sm leading-6 text-red-300">
-                      {teamCreateErrorFlash.message}
-                    </div>
-                  )}
-
-                  <form method="POST" action="/api/teams/create" class="mt-5 space-y-4">
-                    <div>
-                      <label class="block text-sm font-medium text-blue-100/75" for="team-name">
-                        Team name
-                      </label>
-                      <input
-                        id="team-name"
-                        name="teamName"
-                        type="text"
-                        value={createTeamInputValue}
-                        placeholder="Remote Icebreakers"
-                        class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      class="w-full rounded-2xl border border-cyan-300/25 bg-cyan-400/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
-                    >
+                  <section
+                    id="create-team-next"
+                    class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8"
+                  >
+                    <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">
                       Create another team
-                    </button>
-                  </form>
-                </section>
+                    </p>
+                    <h2 class="mt-2 text-2xl font-semibold">Start a new team without leaving the dashboard</h2>
+                    <p class="mt-3 text-sm leading-6 text-blue-100/65">
+                      Multi-team support is real in this slice, so you can create another group here and switch to it
+                      from the same active-team dropdown.
+                    </p>
 
-                <section class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
-                  <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Session controls</p>
-                  <h2 class="mt-2 text-2xl font-semibold">Still safe to leave</h2>
-                  <p class="mt-3 text-sm leading-6 text-blue-100/65">
-                    The redesigned dashboard keeps sign-out available from the authenticated shell while we evolve the
-                    rest of the team setup flow.
-                  </p>
-                  <form method="POST" action="/api/auth/signout" class="mt-5">
-                    <button
-                      type="submit"
-                      class="w-full rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/15"
-                    >
-                      Sign out
-                    </button>
-                  </form>
-                </section>
-              </div>
-            </section>
+                    {teamCreatedFlash && (
+                      <div class="mt-5 rounded-3xl border border-emerald-300/25 bg-emerald-300/10 p-4 text-sm leading-6 text-emerald-100">
+                        {teamCreatedFlash.message}
+                      </div>
+                    )}
+
+                    {teamCreateErrorFlash && (
+                      <div class="mt-5 rounded-3xl border border-red-500/30 bg-red-900/40 p-4 text-sm leading-6 text-red-300">
+                        {teamCreateErrorFlash.message}
+                      </div>
+                    )}
+
+                    <form method="POST" action="/api/teams/create" class="mt-5 space-y-4">
+                      <div>
+                        <label class="block text-sm font-medium text-blue-100/75" for="team-name">
+                          Team name
+                        </label>
+                        <input
+                          id="team-name"
+                          name="teamName"
+                          type="text"
+                          value={createTeamInputValue}
+                          placeholder="Remote Icebreakers"
+                          class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        class="w-full rounded-2xl border border-cyan-300/25 bg-cyan-400/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                      >
+                        Create another team
+                      </button>
+                    </form>
+                  </section>
+
+                  <section class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
+                    <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Session controls</p>
+                    <h2 class="mt-2 text-2xl font-semibold">Still safe to leave</h2>
+                    <p class="mt-3 text-sm leading-6 text-blue-100/65">
+                      The redesigned dashboard keeps sign-out available from the authenticated shell while we evolve the
+                      rest of the team setup flow.
+                    </p>
+                    <form method="POST" action="/api/auth/signout" class="mt-5">
+                      <button
+                        type="submit"
+                        class="w-full rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/15"
+                      >
+                        Sign out
+                      </button>
+                    </form>
+                  </section>
+                </div>
+              </section>
+            </div>
           ) : (
             <section class="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
               <div

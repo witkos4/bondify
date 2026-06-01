@@ -315,9 +315,9 @@ Wire the playable game flow into the existing dashboard and verify it with real 
 
 #### Automated
 
-- [x] 1.1 Supabase migration applies cleanly in local and remote-compatible schema `public`
-- [x] 1.2 Lint passes with the new service and type contracts
-- [x] 1.3 Build passes with no server/client boundary violations
+- [x] 1.1 Supabase migration applies cleanly in local and remote-compatible schema `public` — aaa4b78
+- [x] 1.2 Lint passes with the new service and type contracts — aaa4b78
+- [x] 1.3 Build passes with no server/client boundary violations — aaa4b78
 
 #### Manual
 
@@ -329,29 +329,29 @@ Wire the playable game flow into the existing dashboard and verify it with real 
 
 #### Automated
 
-- [x] 2.1 Lint passes with the new game page and API routes
-- [x] 2.2 Build passes with the new dynamic route
-- [x] 2.3 Invalid form payloads are handled without unhandled exceptions
+- [x] 2.1 Lint passes with the new game page and API routes — aaa4b78
+- [x] 2.2 Build passes with the new dynamic route — aaa4b78
+- [x] 2.3 Invalid form payloads are handled without unhandled exceptions — aaa4b78
 
 #### Manual
 
-- [x] 2.4 Member sees explicit start action before a round exists
-- [x] 2.5 Starting redirects back to the active game page
-- [x] 2.6 Valid response submission lands in submitted/waiting state
-- [x] 2.7 Blank or too-long response shows a visible error
+- [x] 2.4 Member sees explicit start action before a round exists — aaa4b78
+- [x] 2.5 Starting redirects back to the active game page — aaa4b78
+- [x] 2.6 Valid response submission lands in submitted/waiting state — aaa4b78
+- [x] 2.7 Blank or too-long response shows a visible error — aaa4b78
 
 ### Phase 3: Dashboard picker and end-to-end verification
 
 #### Automated
 
-- [ ] 3.1 Lint passes with dashboard integration
-- [ ] 3.2 Build passes with final S-02 behavior
+- [x] 3.1 Lint passes with dashboard integration
+- [x] 3.2 Build passes with final S-02 behavior
 
 #### Manual
 
-- [ ] 3.3 Selected-team dashboard shows seeded game templates
-- [ ] 3.4 User A can start a game and submit once
-- [ ] 3.5 User B can open the same team/game and submit once
-- [ ] 3.6 Submitted users see waiting state and anonymous count
-- [ ] 3.7 No response content or responder identity is visible before S-03
-- [ ] 3.8 Existing S-01 setup flows still work
+- [x] 3.3 Selected-team dashboard shows seeded game templates
+- [x] 3.4 User A can start a game and submit once
+- [x] 3.5 User B can open the same team/game and submit once
+- [x] 3.6 Submitted users see waiting state and anonymous count
+- [x] 3.7 No response content or responder identity is visible before S-03
+- [x] 3.8 Existing S-01 setup flows still work
