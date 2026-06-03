@@ -1,0 +1,37 @@
+
+> bondify@0.0.1 dev
+> astro dev --force
+
+[2m21:49:27[22m [34m[@astrojs/cloudflare][39m Enabling image processing with Cloudflare Images for production with the "IMAGES" Images binding.
+[2m21:49:27[22m [34m[@astrojs/cloudflare][39m Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+Using secrets defined in .env
+[2m21:49:31[22m [34m[types][39m Generated [2m4ms[22m
+[42m[1m astro [22m[49m [32mv6.3.7[39m [2mready in[22m 6290 [2mms[22m
+[2m┃[22m Local    [36mhttp://localhost:4321/[39m
+[2m┃[22m Network  [2muse --host to expose[22m
+[2m21:49:31[22m [32mwatching for file changes...[39m
+[2m21:51:40[22m [34m[vite][39m [32m✨ new dependencies optimized: [33mastro/env/runtime[32m[39m
+[2m21:51:40[22m [34m[vite][39m [32m✨ optimized dependencies changed. reloading[39m
+[2m21:51:40[22m [34m[vite][39m [vite] program reload
+[2m21:56:47[22m [34m[watch][39m /src/styles/global.css
+[2m21:56:47[22m [34m[vite][39m [vite] program reload
+[2m21:58:40[22m [34m[vite][39m [vite] program reload
+[2m21:58:41[22m [34m[vite][39m [vite] program reload
+[2m22:00:14[22m [34m[vite][39m [32m✨ new dependencies optimized: [33mzod[32m[39m
+[2m22:00:14[22m [34m[vite][39m [32m✨ optimized dependencies changed. reloading[39m
+[2m22:00:14[22m [34m[vite][39m [vite] program reload
+[2m22:00:32[22m [34m[vite][39m [vite] program reload
+[2m22:15:27[22m [34m[vite][39m [vite] program reload
+[2m22:20:27[22m [34m[vite][39m [vite] program reload
+[2m22:21:04[22m [34m[watch][39m /src/styles/global.css
+[2m22:21:14[22m [34m[watch][39m /src/styles/global.css
+[2m22:22:25[22m [34m[vite][39m [vite] program reload
+[2m22:26:59[22m [34m[vite][39m [vite] program reload
+[2m22:29:06[22m [34m[vite][39m [vite] program reload
+[2m22:30:44[22m [34m[vite][39m [vite] program reload
+[2m22:33:56[22m [34m[vite][39m [vite] program reload
+[2m22:33:56[22m [34m[vite][39m [vite] program reload
+[2m22:37:06[22m [34m[vite][39m [vite] program reload
+[2m22:47:08[22m [34m[vite][39m [vite] program reload
+[2m22:51:14[22m [34m[vite][39m [vite] program reload
+[2m08:12:13[22m [34m[vite][39m [vite] program reload
