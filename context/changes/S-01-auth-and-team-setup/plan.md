@@ -267,7 +267,7 @@ Complete the team setup milestone by allowing invited users to explicitly accept
 
 ## References
 
-- Change record: `context/changes/auth-and-team-setup/change.md`
+- Change record: `context/changes/S-01-auth-and-team-setup/change.md`
 - Roadmap item: `context/foundation/roadmap.md`
 - Existing auth guard: `src/middleware.ts`
 - Existing auth client: `src/lib/supabase.ts`

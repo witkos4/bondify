@@ -27,6 +27,18 @@ type GameFlash =
       gameSlug: string;
       responseText: string;
       message: string;
+    }
+  | {
+      type: "game-revealed";
+      teamId: string;
+      gameSlug: string;
+      message: string;
+    }
+  | {
+      type: "game-reveal-error";
+      teamId: string;
+      gameSlug: string;
+      message: string;
     };
 
 function serializeFlash(value: GameFlash): string {

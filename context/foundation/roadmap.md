@@ -21,11 +21,11 @@ The north star here means the smallest user-visible milestone that proves the pr
 
 | ID | Change ID | Outcome | Prerequisites | PRD refs | Status |
 | --- | --- | --- | --- | --- | --- |
-| F-01 | team-and-game-data-foundation | Teams, memberships, game rounds, anonymous responses, and 30-day history storage exist with privacy rules enforced. | — | FR-002, FR-003, FR-005, FR-007, US-01 | ready |
-| S-01 | auth-and-team-setup | A signed-in user can create a team, use a visible email identity for teammate setup, add teammates, and see members join the team space. | F-01 | FR-001, FR-002, FR-003, US-01 | implemented |
-| S-02 | game-round-and-anonymous-submission | Any team member can open one micro-game and each teammate can submit exactly one anonymous response without a separate session flow. | S-01 | FR-004, FR-005, US-01 | implemented |
-| S-03 | shared-reveal-results | Participants see one shared results screen with every submitted response once the round ends. | S-02 | FR-006, US-01 | proposed |
-| S-04 | selected-game-history | Selected games leave a simple 30-day team history that the team owner can clear. | S-03 | FR-007, US-01 | proposed |
+| F-01 | F-01-team-and-game-data-foundation | Teams, memberships, game rounds, anonymous responses, and 30-day history storage exist with privacy rules enforced. | — | FR-002, FR-003, FR-005, FR-007, US-01 | ready |
+| S-01 | S-01-auth-and-team-setup | A signed-in user can create a team, use a visible email identity for teammate setup, add teammates, and see members join the team space. | F-01 | FR-001, FR-002, FR-003, US-01 | implemented |
+| S-02 | S-02-game-round-and-anonymous-submission | Any team member can open one micro-game and each teammate can submit exactly one anonymous response without a separate session flow. | S-01 | FR-004, FR-005, US-01 | implemented |
+| S-03 | S-03-shared-reveal-results | Participants see one shared results screen with every submitted response once the round ends. | S-02 | FR-006, US-01 | proposed |
+| S-04 | S-04-selected-game-history | Selected games leave a simple 30-day team history that the team owner can clear. | S-03 | FR-007, US-01 | proposed |
 
 ## Baseline
 
@@ -41,7 +41,7 @@ The north star here means the smallest user-visible milestone that proves the pr
 ### F-01: Team and game data foundation
 
 Outcome: Teams, memberships, game rounds, anonymous responses, and 30-day history storage exist with privacy rules enforced.
-Change ID: team-and-game-data-foundation
+Change ID: F-01-team-and-game-data-foundation
 PRD refs: FR-002, FR-003, FR-005, FR-007, US-01
 Prerequisites: —
 Parallel with: —
@@ -57,7 +57,7 @@ Unlocks: S-01, S-02, S-03, S-04
 ### S-01: Auth and team setup
 
 Outcome: A signed-in user can create a team, use a visible email identity for teammate setup, add teammates, and see members join the team space.
-Change ID: auth-and-team-setup
+Change ID: S-01-auth-and-team-setup
 PRD refs: FR-001, FR-002, FR-003, US-01
 Prerequisites: F-01
 Parallel with: —
@@ -69,7 +69,7 @@ Status: implemented
 ### S-02: Game round and anonymous submission
 
 Outcome: Any team member can open one micro-game and each teammate can submit exactly one anonymous response without a separate session flow.
-Change ID: game-round-and-anonymous-submission
+Change ID: S-02-game-round-and-anonymous-submission
 PRD refs: FR-004, FR-005, US-01
 Prerequisites: S-01
 Parallel with: —
@@ -82,7 +82,7 @@ Status: implemented
 ### S-03: Shared reveal results
 
 Outcome: Participants see one shared results screen with every submitted response once the round ends.
-Change ID: shared-reveal-results
+Change ID: S-03-shared-reveal-results
 PRD refs: FR-006, US-01
 Prerequisites: S-02
 Parallel with: —
@@ -94,7 +94,7 @@ Status: proposed
 ### S-04: Selected-game history
 
 Outcome: Selected games leave a simple 30-day team history that the team owner can clear.
-Change ID: selected-game-history
+Change ID: S-04-selected-game-history
 PRD refs: FR-007, US-01
 Prerequisites: S-03
 Parallel with: —
@@ -108,11 +108,11 @@ Status: proposed
 
 | Roadmap ID | Change ID | Outcome | Status |
 | --- | --- | --- | --- |
-| F-01 | team-and-game-data-foundation | Teams, memberships, game rounds, anonymous responses, and 30-day history storage exist with privacy rules enforced. | ready |
-| S-01 | auth-and-team-setup | A signed-in user can create a team, use a visible email identity for teammate setup, add teammates, and see members join the team space. | implemented |
-| S-02 | game-round-and-anonymous-submission | Any team member can open one micro-game and each teammate can submit exactly one anonymous response without a separate session flow. | implemented |
-| S-03 | shared-reveal-results | Participants see one shared results screen with every submitted response once the round ends. | proposed |
-| S-04 | selected-game-history | Selected games leave a simple 30-day team history that the team owner can clear. | proposed |
+| F-01 | F-01-team-and-game-data-foundation | Teams, memberships, game rounds, anonymous responses, and 30-day history storage exist with privacy rules enforced. | ready |
+| S-01 | S-01-auth-and-team-setup | A signed-in user can create a team, use a visible email identity for teammate setup, add teammates, and see members join the team space. | implemented |
+| S-02 | S-02-game-round-and-anonymous-submission | Any team member can open one micro-game and each teammate can submit exactly one anonymous response without a separate session flow. | implemented |
+| S-03 | S-03-shared-reveal-results | Participants see one shared results screen with every submitted response once the round ends. | proposed |
+| S-04 | S-04-selected-game-history | Selected games leave a simple 30-day team history that the team owner can clear. | proposed |
 
 ## Open Roadmap Questions
 

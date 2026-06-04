@@ -282,7 +282,7 @@ Finish the foundation so the next implementation slice can start immediately wit
 
 - Product requirements: `context/foundation/prd.md`
 - Roadmap item: `context/foundation/roadmap.md`
-- Change identity: `context/changes/team-and-game-data-foundation/change.md`
+- Change identity: `context/changes/F-01-team-and-game-data-foundation/change.md`
 - Existing auth client: `src/lib/supabase.ts`
 - Existing auth guard: `src/middleware.ts`
 - Existing auth routes: `src/pages/api/auth/signin.ts`, `src/pages/api/auth/signup.ts`, `src/pages/api/auth/signout.ts`

@@ -1,6 +1,6 @@
 # Team and game data foundation — Plan Brief
 
-> Full plan: `context/changes/team-and-game-data-foundation/plan.md`
+> Full plan: `context/changes/F-01-team-and-game-data-foundation/plan.md`
 
 ## What & Why
 

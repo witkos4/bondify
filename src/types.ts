@@ -20,9 +20,13 @@ export type BondifyDomainErrorCode =
   | "INVALID_GAME_TEMPLATE"
   | "ROUND_NOT_FOUND"
   | "ROUND_NOT_OPEN"
+  | "ROUND_ALREADY_REVEALED"
+  | "ROUND_HAS_NO_RESPONSES"
   | "INVALID_RESPONSE_TEXT"
   | "DUPLICATE_RESPONSE"
-  | "HISTORY_NOT_VISIBLE";
+  | "HISTORY_NOT_VISIBLE"
+  | "HISTORY_ENTRY_NOT_FOUND"
+  | "TEAM_OWNER_REQUIRED";
 
 export interface BondifyProfile {
   id: string;
@@ -136,6 +140,22 @@ export interface ParticipantSafeHistoryEntry {
   responses: ParticipantSafeResponse[];
 }
 
+export interface TeamHistoryState {
+  team: BondifyTeam;
+  entries: ParticipantSafeHistoryEntry[];
+  canClearHistory: boolean;
+}
+
+export interface TeamHistoryClearResult {
+  teamId: string;
+  clearedCount: number;
+  clearedAt: string;
+}
+
+export interface TeamHistoryEntryClearResult extends TeamHistoryClearResult {
+  roundId: string;
+}
+
 export type BondifyGameTemplateProjection = Pick<
   BondifyGameTemplate,
   "id" | "slug" | "name" | "prompt" | "isHistoryEnabled"
@@ -153,6 +173,7 @@ export interface TeamGameState {
   membership: BondifyTeamMembership;
   template: BondifyGameTemplateProjection;
   activeRound: ActiveGameRoundSummary | null;
+  revealedRound: ParticipantSafeRoundReveal | null;
 }
 
 export interface BondifyServiceResult<T> {

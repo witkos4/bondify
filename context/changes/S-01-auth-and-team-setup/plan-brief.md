@@ -1,6 +1,6 @@
 # Auth and team setup — Plan Brief
 
-> Full plan: `context/changes/auth-and-team-setup/plan.md`
+> Full plan: `context/changes/S-01-auth-and-team-setup/plan.md`
 
 ## What & Why
 

@@ -1,7 +1,7 @@
 <!-- IMPL-REVIEW-REPORT -->
 # Implementation Review: Game Round and Anonymous Submission
 
-- **Plan**: `context/changes/game-round-and-anonymous-submission/plan.md`
+- **Plan**: `context/changes/S-02-game-round-and-anonymous-submission/plan.md`
 - **Scope**: Phases 1-3
 - **Date**: 2026-06-02
 - **Verdict**: APPROVED

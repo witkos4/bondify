@@ -1,5 +1,5 @@
 ---
-change_id: auth-and-team-setup
+change_id: S-01-auth-and-team-setup
 title: Auth and team setup
 status: impl_reviewed
 created: 2026-05-28

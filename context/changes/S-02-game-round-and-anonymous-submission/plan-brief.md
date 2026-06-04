@@ -1,6 +1,6 @@
 # Game Round and Anonymous Submission - Plan Brief
 
-> Full plan: `context/changes/game-round-and-anonymous-submission/plan.md`
+> Full plan: `context/changes/S-02-game-round-and-anonymous-submission/plan.md`
 
 ## What & Why
 

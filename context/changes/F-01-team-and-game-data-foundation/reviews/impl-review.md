@@ -1,7 +1,7 @@
 <!-- IMPL-REVIEW-REPORT -->
 # Implementation Review: Team and game data foundation
 
-- **Plan**: `context/changes/team-and-game-data-foundation/plan.md`
+- **Plan**: `context/changes/F-01-team-and-game-data-foundation/plan.md`
 - **Scope**: Full plan, all 3 phases
 - **Date**: 2026-06-01
 - **Verdict**: APPROVED WITH WARNING

@@ -1,5 +1,5 @@
 ---
-change_id: team-and-game-data-foundation
+change_id: F-01-team-and-game-data-foundation
 title: Team and game data foundation
 status: impl_reviewed
 created: 2026-05-27

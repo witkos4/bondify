@@ -298,8 +298,8 @@ Wire the playable game flow into the existing dashboard and verify it with real 
 
 - Roadmap item: `context/foundation/roadmap.md`
 - Product requirements: `context/foundation/prd.md`
-- Foundation plan: `context/changes/team-and-game-data-foundation/plan.md`
-- S-01 plan: `context/changes/auth-and-team-setup/plan.md`
+- Foundation plan: `context/changes/F-01-team-and-game-data-foundation/plan.md`
+- S-01 plan: `context/changes/S-01-auth-and-team-setup/plan.md`
 - Current dashboard: `src/pages/dashboard.astro`
 - Service layer: `src/lib/services/bondify.ts`
 - Shared types: `src/types.ts`

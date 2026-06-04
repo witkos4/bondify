@@ -1,5 +1,5 @@
 ---
-id: game-round-and-anonymous-submission
+id: S-02-game-round-and-anonymous-submission
 roadmap_id: S-02
 title: Game round and anonymous submission
 status: impl_reviewed

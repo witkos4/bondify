@@ -1,7 +1,7 @@
 <!-- IMPL-REVIEW-REPORT -->
 # Implementation Review: Auth and team setup
 
-- **Plan**: `context/changes/auth-and-team-setup/plan.md`
+- **Plan**: `context/changes/S-01-auth-and-team-setup/plan.md`
 - **Scope**: Full plan, all 3 phases
 - **Date**: 2026-06-01
 - **Verdict**: APPROVED WITH MINOR WARNING

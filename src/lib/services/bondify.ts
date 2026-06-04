@@ -16,6 +16,9 @@ import type {
   ParticipantSafeHistoryEntry,
   ParticipantSafeRoundReveal,
   TeamGameState,
+  TeamHistoryClearResult,
+  TeamHistoryEntryClearResult,
+  TeamHistoryState,
   TeamInviteCreateResult,
   TeamInviteView,
   TeamRosterEntry,
@@ -138,6 +141,7 @@ interface SupabaseLikeError {
 }
 
 const MAX_RESPONSE_TEXT_LENGTH = 500;
+const HISTORY_RETENTION_DAYS = 30;
 
 export class BondifyServiceError extends Error {
   readonly code: BondifyDomainErrorCode;
@@ -282,11 +286,32 @@ function toParticipantSafeResponses(rows: GameResponseRow[]) {
   }));
 }
 
+function toParticipantSafeRoundReveal(row: GameRoundWithTemplateRow): ParticipantSafeRoundReveal {
+  return {
+    round: toRound(row),
+    template: toTemplateProjection(row.game_template),
+    responses: toParticipantSafeResponses(row.game_responses),
+  };
+}
+
+function toTeamHistoryState(input: {
+  team: TeamRow;
+  entries: ParticipantSafeHistoryEntry[];
+  profileId: string;
+}): TeamHistoryState {
+  return {
+    team: toTeam(input.team),
+    entries: input.entries,
+    canClearHistory: input.team.created_by === input.profileId,
+  };
+}
+
 function toTeamGameState(input: {
   teamId: string;
   membership: TeamMembershipRow;
   template: TemplateProjectionRow;
   activeRound: ActiveGameRoundRow | null;
+  revealedRound: GameRoundWithTemplateRow | null;
 }): TeamGameState {
   const activeRound = input.activeRound;
   const currentMemberResponse =
@@ -304,6 +329,7 @@ function toTeamGameState(input: {
           currentMemberResponseId: currentMemberResponse?.id ?? null,
         }
       : null,
+    revealedRound: input.revealedRound ? toParticipantSafeRoundReveal(input.revealedRound) : null,
   };
 }
 
@@ -409,6 +435,142 @@ async function requireMembershipAccess(
   }
 
   return membership;
+}
+
+async function getTeamForMember(supabase: SupabaseServerClient, teamId: string): Promise<TeamRow> {
+  const { data, error } = await supabase
+    .from("teams")
+    .select("id, name, created_by, created_at, updated_at")
+    .eq("id", teamId)
+    .maybeSingle();
+
+  if (error) {
+    throw new BondifyServiceError("TEAM_NOT_FOUND", error.message, { teamId });
+  }
+
+  if (!data) {
+    throw new BondifyServiceError("TEAM_NOT_FOUND", "Team not found.", { teamId });
+  }
+
+  return data;
+}
+
+async function requireTeamOwnerAccess(
+  supabase: SupabaseServerClient,
+  input: { teamId: string; profileId: string },
+): Promise<TeamRow> {
+  await requireMembershipAccess(supabase, input.teamId, input.profileId);
+  const team = await getTeamForMember(supabase, input.teamId);
+
+  if (team.created_by !== input.profileId) {
+    throw new BondifyServiceError("TEAM_OWNER_REQUIRED", "Only the team owner can clear team history.", {
+      teamId: input.teamId,
+      profileId: input.profileId,
+    });
+  }
+
+  return team;
+}
+
+function getHistoryVisibleUntil(firstResponseCreatedAt: string): string {
+  const firstResponseTime = new Date(firstResponseCreatedAt).getTime();
+  const retentionMs = HISTORY_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  return new Date(firstResponseTime + retentionMs).toISOString();
+}
+
+async function markRoundHistoryVisibleIfEligible(
+  supabase: SupabaseServerClient,
+  input: { round: GameRoundRow; firstResponseCreatedAt: string },
+): Promise<void> {
+  if (input.round.history_visible_until !== null) {
+    return;
+  }
+
+  const { data: template, error: templateError } = await supabase
+    .from("game_templates")
+    .select("is_history_enabled")
+    .eq("id", input.round.game_template_id)
+    .maybeSingle();
+
+  if (templateError) {
+    throw new BondifyServiceError("INVALID_GAME_TEMPLATE", templateError.message, {
+      gameTemplateId: input.round.game_template_id,
+    });
+  }
+
+  if (!template?.is_history_enabled) {
+    return;
+  }
+
+  const { error: updateError } = await supabase
+    .from("game_rounds")
+    .update({
+      history_visible_until: getHistoryVisibleUntil(input.firstResponseCreatedAt),
+    })
+    .eq("id", input.round.id)
+    .is("history_visible_until", null);
+
+  if (updateError) {
+    throw new BondifyServiceError("HISTORY_NOT_VISIBLE", updateError.message, {
+      roundId: input.round.id,
+    });
+  }
+}
+
+async function listVisibleHistoryRows(supabase: SupabaseServerClient, teamId: string): Promise<HistoryEntryRow[]> {
+  const { data, error } = await supabase
+    .from("game_rounds")
+    .select(
+      `
+        id,
+        team_id,
+        game_template_id,
+        opened_by_profile_id,
+        status,
+        revealed_at,
+        history_visible_until,
+        history_cleared_at,
+        created_at,
+        updated_at,
+        game_template:game_templates!inner (
+          id,
+          slug,
+          name,
+          prompt,
+          is_history_enabled
+        ),
+        game_responses (
+          id,
+          round_id,
+          membership_id,
+          profile_id,
+          response_text,
+          created_at
+        )
+      `,
+    )
+    .eq("team_id", teamId)
+    .eq("status", "revealed")
+    .eq("game_template.is_history_enabled", true)
+    .not("history_visible_until", "is", null)
+    .gte("history_visible_until", new Date().toISOString())
+    .is("history_cleared_at", null)
+    .order("revealed_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new BondifyServiceError("HISTORY_NOT_VISIBLE", error.message, { teamId });
+  }
+
+  return data as HistoryEntryRow[];
+}
+
+function toParticipantSafeHistoryEntries(rows: HistoryEntryRow[]): ParticipantSafeHistoryEntry[] {
+  return rows.map((row) => ({
+    round: toRound(row),
+    template: toTemplateProjection(row.game_template),
+    responses: toParticipantSafeResponses(row.game_responses),
+  }));
 }
 
 function toTeamRosterEntry(row: TeamMembershipWithProfileRow): TeamRosterEntry {
@@ -545,6 +707,56 @@ async function getActiveGameRound(
   return data;
 }
 
+async function getLatestRevealedGameRound(
+  supabase: SupabaseServerClient,
+  input: { teamId: string; gameTemplateId: string },
+): Promise<GameRoundWithTemplateRow | null> {
+  const { data, error } = await supabase
+    .from("game_rounds")
+    .select(
+      `
+        id,
+        team_id,
+        game_template_id,
+        opened_by_profile_id,
+        status,
+        revealed_at,
+        history_visible_until,
+        history_cleared_at,
+        created_at,
+        updated_at,
+        game_template:game_templates (
+          id,
+          slug,
+          name,
+          prompt,
+          is_history_enabled
+        ),
+        game_responses (
+          id,
+          round_id,
+          membership_id,
+          profile_id,
+          response_text,
+          created_at
+        )
+      `,
+    )
+    .eq("team_id", input.teamId)
+    .eq("game_template_id", input.gameTemplateId)
+    .eq("status", "revealed")
+    .order("revealed_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new BondifyServiceError("ROUND_NOT_FOUND", error.message, input);
+  }
+
+  return data;
+}
+
 async function loadTeamGameState(
   supabase: SupabaseServerClient,
   input: { teamId: string; gameSlug: string; profileId: string },
@@ -555,12 +767,19 @@ async function loadTeamGameState(
     teamId: input.teamId,
     gameTemplateId: template.id,
   });
+  const revealedRound = activeRound
+    ? null
+    : await getLatestRevealedGameRound(supabase, {
+        teamId: input.teamId,
+        gameTemplateId: template.id,
+      });
 
   return toTeamGameState({
     teamId: input.teamId,
     membership,
     template,
     activeRound,
+    revealedRound,
   });
 }
 
@@ -1003,6 +1222,143 @@ export function createBondifyServices(context: ServiceContext) {
       });
     },
 
+    async revealTeamGameRound(input: {
+      teamId: string;
+      gameSlug: string;
+      roundId: string;
+    }): Promise<ParticipantSafeRoundReveal> {
+      return withCurrentProfile(async (supabase, profile) => {
+        await requireMembershipAccess(supabase, input.teamId, profile.id);
+        const template = await getTemplateBySlug(supabase, input.gameSlug);
+
+        const { data: round, error: roundError } = await supabase
+          .from("game_rounds")
+          .select(
+            `
+              id,
+              team_id,
+              game_template_id,
+              opened_by_profile_id,
+              status,
+              revealed_at,
+              history_visible_until,
+              history_cleared_at,
+              created_at,
+              updated_at,
+              game_template:game_templates (
+                id,
+                slug,
+                name,
+                prompt,
+                is_history_enabled
+              ),
+              game_responses (
+                id,
+                round_id,
+                membership_id,
+                profile_id,
+                response_text,
+                created_at
+              )
+            `,
+          )
+          .eq("id", input.roundId)
+          .eq("team_id", input.teamId)
+          .eq("game_template_id", template.id)
+          .maybeSingle();
+
+        if (roundError) {
+          throw new BondifyServiceError("ROUND_NOT_FOUND", roundError.message, {
+            roundId: input.roundId,
+            teamId: input.teamId,
+            gameSlug: input.gameSlug,
+          });
+        }
+
+        if (!round) {
+          throw new BondifyServiceError("ROUND_NOT_FOUND", "Round not found for this team game.", {
+            roundId: input.roundId,
+            teamId: input.teamId,
+            gameSlug: input.gameSlug,
+          });
+        }
+
+        const roundRow: GameRoundWithTemplateRow = round;
+
+        if (roundRow.status === "revealed") {
+          throw new BondifyServiceError("ROUND_ALREADY_REVEALED", "This game has already been revealed.", {
+            roundId: input.roundId,
+          });
+        }
+
+        if (roundRow.status !== "open") {
+          throw new BondifyServiceError("ROUND_NOT_OPEN", "This game is not ready to reveal.", {
+            roundId: input.roundId,
+            status: roundRow.status,
+          });
+        }
+
+        if (roundRow.game_responses.length === 0) {
+          throw new BondifyServiceError("ROUND_HAS_NO_RESPONSES", "Collect at least one response before revealing.", {
+            roundId: input.roundId,
+          });
+        }
+
+        const { error: updateError } = await supabase
+          .from("game_rounds")
+          .update({
+            status: "revealed",
+            revealed_at: new Date().toISOString(),
+          })
+          .eq("id", input.roundId)
+          .eq("status", "open");
+
+        if (updateError) {
+          throw new BondifyServiceError("ROUND_NOT_OPEN", updateError.message, { roundId: input.roundId });
+        }
+
+        const { data: revealedRound, error: revealedRoundError } = await supabase
+          .from("game_rounds")
+          .select(
+            `
+              id,
+              team_id,
+              game_template_id,
+              opened_by_profile_id,
+              status,
+              revealed_at,
+              history_visible_until,
+              history_cleared_at,
+              created_at,
+              updated_at,
+              game_template:game_templates (
+                id,
+                slug,
+                name,
+                prompt,
+                is_history_enabled
+              ),
+              game_responses (
+                id,
+                round_id,
+                membership_id,
+                profile_id,
+                response_text,
+                created_at
+              )
+            `,
+          )
+          .eq("id", input.roundId)
+          .single();
+
+        if (revealedRoundError) {
+          throw new BondifyServiceError("ROUND_NOT_FOUND", revealedRoundError.message, { roundId: input.roundId });
+        }
+
+        return toParticipantSafeRoundReveal(revealedRound);
+      });
+    },
+
     async createRound(input: {
       teamId: string;
       gameTemplateId: string;
@@ -1129,12 +1485,19 @@ export function createBondifyServices(context: ServiceContext) {
           });
         }
 
-        return toResponseRecord(createdResponse);
+        const createdResponseRow: GameResponseRow = createdResponse;
+
+        await markRoundHistoryVisibleIfEligible(supabase, {
+          round: roundRow,
+          firstResponseCreatedAt: createdResponseRow.created_at,
+        });
+
+        return toResponseRecord(createdResponseRow);
       });
     },
 
     async getParticipantSafeRoundReveal(roundId: string): Promise<ParticipantSafeRoundReveal> {
-      return withCurrentProfile(async (supabase) => {
+      return withCurrentProfile(async (supabase, profile) => {
         const { data, error } = await supabase
           .from("game_rounds")
           .select(
@@ -1178,70 +1541,105 @@ export function createBondifyServices(context: ServiceContext) {
         }
 
         const roundRow: GameRoundWithTemplateRow = data;
+        await requireMembershipAccess(supabase, roundRow.team_id, profile.id);
 
-        return {
-          round: toRound(roundRow),
-          template: toTemplateProjection(roundRow.game_template),
-          responses: toParticipantSafeResponses(roundRow.game_responses),
-        };
+        if (roundRow.status !== "revealed") {
+          throw new BondifyServiceError("HISTORY_NOT_VISIBLE", "This game has not been revealed yet.", { roundId });
+        }
+
+        return toParticipantSafeRoundReveal(roundRow);
       });
     },
 
     async getParticipantSafeHistory(teamId: string): Promise<ParticipantSafeHistoryEntry[]> {
       return withCurrentProfile(async (supabase, profile) => {
         await requireMembershipAccess(supabase, teamId, profile.id);
+        return toParticipantSafeHistoryEntries(await listVisibleHistoryRows(supabase, teamId));
+      });
+    },
 
-        const { data, error } = await supabase
+    async getTeamHistoryState(teamId: string): Promise<TeamHistoryState> {
+      return withCurrentProfile(async (supabase, profile) => {
+        await requireMembershipAccess(supabase, teamId, profile.id);
+        const team = await getTeamForMember(supabase, teamId);
+        const entries = toParticipantSafeHistoryEntries(await listVisibleHistoryRows(supabase, teamId));
+
+        return toTeamHistoryState({
+          team,
+          entries,
+          profileId: profile.id,
+        });
+      });
+    },
+
+    async clearTeamHistory(teamId: string): Promise<TeamHistoryClearResult> {
+      return withCurrentProfile(async (supabase, profile) => {
+        await requireTeamOwnerAccess(supabase, { teamId, profileId: profile.id });
+        const rows = await listVisibleHistoryRows(supabase, teamId);
+        const clearedAt = new Date().toISOString();
+
+        if (rows.length === 0) {
+          return {
+            teamId,
+            clearedCount: 0,
+            clearedAt,
+          };
+        }
+
+        const { error } = await supabase
           .from("game_rounds")
-          .select(
-            `
-              id,
-              team_id,
-              game_template_id,
-              opened_by_profile_id,
-              status,
-              revealed_at,
-              history_visible_until,
-              history_cleared_at,
-              created_at,
-              updated_at,
-              game_template:game_templates (
-                id,
-                slug,
-                name,
-                prompt,
-                is_history_enabled
-              ),
-              game_responses (
-                id,
-                round_id,
-                membership_id,
-                profile_id,
-                response_text,
-                created_at
-              )
-            `,
+          .update({ history_cleared_at: clearedAt })
+          .in(
+            "id",
+            rows.map((row) => row.id),
           )
-          .eq("team_id", teamId)
-          .not("history_visible_until", "is", null)
-          .is("history_cleared_at", null)
-          .order("created_at", { ascending: false });
+          .is("history_cleared_at", null);
 
         if (error) {
           throw new BondifyServiceError("HISTORY_NOT_VISIBLE", error.message, { teamId });
         }
 
-        const now = new Date();
+        return {
+          teamId,
+          clearedCount: rows.length,
+          clearedAt,
+        };
+      });
+    },
 
-        const historyRows: HistoryEntryRow[] = data;
+    async clearTeamHistoryEntry(input: { teamId: string; roundId: string }): Promise<TeamHistoryEntryClearResult> {
+      return withCurrentProfile(async (supabase, profile) => {
+        await requireTeamOwnerAccess(supabase, { teamId: input.teamId, profileId: profile.id });
+        const rows = await listVisibleHistoryRows(supabase, input.teamId);
+        const matchingRow = rows.find((row) => row.id === input.roundId);
 
-        return historyRows
-          .filter((row) => row.history_visible_until !== null && new Date(row.history_visible_until) >= now)
-          .map((row) => ({
-            round: toRound(row),
-            template: toTemplateProjection(row.game_template),
-            responses: toParticipantSafeResponses(row.game_responses),
-          }));
+        if (!matchingRow) {
+          throw new BondifyServiceError("HISTORY_ENTRY_NOT_FOUND", "History entry not found.", {
+            teamId: input.teamId,
+            roundId: input.roundId,
+          });
+        }
+
+        const clearedAt = new Date().toISOString();
+        const { error } = await supabase
+          .from("game_rounds")
+          .update({ history_cleared_at: clearedAt })
+          .eq("id", input.roundId)
+          .is("history_cleared_at", null);
+
+        if (error) {
+          throw new BondifyServiceError("HISTORY_NOT_VISIBLE", error.message, {
+            teamId: input.teamId,
+            roundId: input.roundId,
+          });
+        }
+
+        return {
+          teamId: input.teamId,
+          roundId: input.roundId,
+          clearedCount: 1,
+          clearedAt,
+        };
       });
     },
   };
