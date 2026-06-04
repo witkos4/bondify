@@ -140,6 +140,11 @@ interface SupabaseLikeError {
   message?: string;
 }
 
+interface HistoryClearRpcResult {
+  cleared_count: number;
+  cleared_at: string;
+}
+
 const MAX_RESPONSE_TEXT_LENGTH = 500;
 const HISTORY_RETENTION_DAYS = 30;
 
@@ -303,6 +308,16 @@ function toTeamHistoryState(input: {
     team: toTeam(input.team),
     entries: input.entries,
     canClearHistory: input.team.created_by === input.profileId,
+  };
+}
+
+function normalizeHistoryClearRpcResult(
+  row: HistoryClearRpcResult | null,
+  fallbackClearedAt: string,
+): HistoryClearRpcResult {
+  return {
+    cleared_count: row?.cleared_count ?? 0,
+    cleared_at: row?.cleared_at ?? fallbackClearedAt,
   };
 }
 
@@ -1575,34 +1590,19 @@ export function createBondifyServices(context: ServiceContext) {
     async clearTeamHistory(teamId: string): Promise<TeamHistoryClearResult> {
       return withCurrentProfile(async (supabase, profile) => {
         await requireTeamOwnerAccess(supabase, { teamId, profileId: profile.id });
-        const rows = await listVisibleHistoryRows(supabase, teamId);
         const clearedAt = new Date().toISOString();
-
-        if (rows.length === 0) {
-          return {
-            teamId,
-            clearedCount: 0,
-            clearedAt,
-          };
-        }
-
-        const { error } = await supabase
-          .from("game_rounds")
-          .update({ history_cleared_at: clearedAt })
-          .in(
-            "id",
-            rows.map((row) => row.id),
-          )
-          .is("history_cleared_at", null);
+        const { data, error } = await supabase.rpc("clear_team_history", { team_uuid: teamId }).maybeSingle();
 
         if (error) {
           throw new BondifyServiceError("HISTORY_NOT_VISIBLE", error.message, { teamId });
         }
 
+        const result = normalizeHistoryClearRpcResult(data as HistoryClearRpcResult | null, clearedAt);
+
         return {
           teamId,
-          clearedCount: rows.length,
-          clearedAt,
+          clearedCount: result.cleared_count,
+          clearedAt: result.cleared_at,
         };
       });
     },
@@ -1610,22 +1610,10 @@ export function createBondifyServices(context: ServiceContext) {
     async clearTeamHistoryEntry(input: { teamId: string; roundId: string }): Promise<TeamHistoryEntryClearResult> {
       return withCurrentProfile(async (supabase, profile) => {
         await requireTeamOwnerAccess(supabase, { teamId: input.teamId, profileId: profile.id });
-        const rows = await listVisibleHistoryRows(supabase, input.teamId);
-        const matchingRow = rows.find((row) => row.id === input.roundId);
-
-        if (!matchingRow) {
-          throw new BondifyServiceError("HISTORY_ENTRY_NOT_FOUND", "History entry not found.", {
-            teamId: input.teamId,
-            roundId: input.roundId,
-          });
-        }
-
         const clearedAt = new Date().toISOString();
-        const { error } = await supabase
-          .from("game_rounds")
-          .update({ history_cleared_at: clearedAt })
-          .eq("id", input.roundId)
-          .is("history_cleared_at", null);
+        const { data, error } = await supabase
+          .rpc("clear_team_history_entry", { team_uuid: input.teamId, round_uuid: input.roundId })
+          .maybeSingle();
 
         if (error) {
           throw new BondifyServiceError("HISTORY_NOT_VISIBLE", error.message, {
@@ -1634,11 +1622,20 @@ export function createBondifyServices(context: ServiceContext) {
           });
         }
 
+        const result = normalizeHistoryClearRpcResult(data as HistoryClearRpcResult | null, clearedAt);
+
+        if (result.cleared_count === 0) {
+          throw new BondifyServiceError("HISTORY_ENTRY_NOT_FOUND", "History entry not found.", {
+            teamId: input.teamId,
+            roundId: input.roundId,
+          });
+        }
+
         return {
           teamId: input.teamId,
           roundId: input.roundId,
-          clearedCount: 1,
-          clearedAt,
+          clearedCount: result.cleared_count,
+          clearedAt: result.cleared_at,
         };
       });
     },

@@ -3,7 +3,7 @@ project: Bondify
 version: 1
 status: proposed
 created: 2026-05-27
-updated: 2026-06-01
+updated: 2026-06-04
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -26,6 +26,7 @@ The north star here means the smallest user-visible milestone that proves the pr
 | S-02 | S-02-game-round-and-anonymous-submission | Any team member can open one micro-game and each teammate can submit exactly one anonymous response without a separate session flow. | S-01 | FR-004, FR-005, US-01 | implemented |
 | S-03 | S-03-shared-reveal-results | Participants see one shared results screen with every submitted response once the round ends. | S-02 | FR-006, US-01 | proposed |
 | S-04 | S-04-selected-game-history | Selected games leave a simple 30-day team history that the team owner can clear. | S-03 | FR-007, US-01 | proposed |
+| S-05 | S-05-release-hardening-and-acceptance | Shared reveal and history are hardened, CI-clean, and manually accepted for the MVP loop. | S-03, S-04 | FR-006, FR-007, US-01 | ready |
 
 ## Baseline
 
@@ -104,6 +105,23 @@ Unknowns:
 Risk: History is intentionally last because it extends the core ritual loop rather than proving it; shipping it earlier would slow the shortest path to a usable team experience.
 Status: proposed
 
+### S-05: Release hardening and acceptance
+
+Outcome: Shared reveal and selected-game history are hardened, CI-clean, and manually accepted for the MVP loop.
+Change ID: S-05-release-hardening-and-acceptance
+PRD refs: FR-006, FR-007, US-01
+Prerequisites: S-03, S-04
+Parallel with: —
+Blockers:
+- S-03 and S-04 implementation-review findings remain untriaged.
+- Full `npm run lint` currently fails on repo-wide CRLF Prettier errors.
+Unknowns:
+- Should owner history clear be enforced through narrow Supabase RPCs, or is a narrower direct table policy acceptable for this MVP? (Owner: user, Block: yes)
+- Should repo-wide CRLF lint cleanup be included in this slice or split into a separate housekeeping change? (Owner: user, Block: yes)
+- Should manual acceptance be done as a scripted/browser-assisted pass or a human-only checklist? (Owner: user, Block: yes)
+Risk: This slice is intentionally after S-03/S-04 because it should not add product scope; it closes review findings, tightens database enforcement, restores CI confidence, and proves the full team ritual manually before the roadmap moves on.
+Status: ready
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID | Outcome | Status |
@@ -113,6 +131,7 @@ Status: proposed
 | S-02 | S-02-game-round-and-anonymous-submission | Any team member can open one micro-game and each teammate can submit exactly one anonymous response without a separate session flow. | implemented |
 | S-03 | S-03-shared-reveal-results | Participants see one shared results screen with every submitted response once the round ends. | proposed |
 | S-04 | S-04-selected-game-history | Selected games leave a simple 30-day team history that the team owner can clear. | proposed |
+| S-05 | S-05-release-hardening-and-acceptance | Shared reveal and history are hardened, CI-clean, and manually accepted for the MVP loop. | ready |
 
 ## Open Roadmap Questions
 
