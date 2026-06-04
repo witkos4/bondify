@@ -2,7 +2,7 @@
 id: S-03-shared-reveal-results
 roadmap_id: S-03
 title: Shared reveal results
-status: implementing
+status: implemented
 created: 2026-06-04
 updated: 2026-06-04
 ---

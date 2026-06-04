@@ -16,16 +16,16 @@ Each selected team can show available game templates from the seeded catalog. A 
 
 ## Key Decisions Made
 
-| Decision | Choice | Why |
-| --- | --- | --- |
-| Active session scope | One active round per team and game | Future multiple games are expected, but each game should have one current team session. |
-| Game selection | Template picker | Uses the existing `game_templates` foundation and avoids hard-coding one game. |
-| User-facing surface | Dedicated team-scoped game page | The game is the visible concept; the round stays in the background as backing state. |
-| Round creation | Explicit start action | Avoids accidental sessions from simple navigation. |
-| URL shape | Team-scoped game URL | Keeps multi-team users unambiguous and shareable within the app. |
-| Response shape | Single required text response, 500 chars max | Matches the current `response_text` storage contract and keeps S-02 small. |
-| Post-submit state | Saved/waiting state | Confirms success while leaving reveal behavior to `S-03`. |
-| Progress visibility | Anonymous submitted count | Gives useful waiting feedback without exposing response content or identities. |
+| Decision             | Choice                                       | Why                                                                                     |
+| -------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Active session scope | One active round per team and game           | Future multiple games are expected, but each game should have one current team session. |
+| Game selection       | Template picker                              | Uses the existing `game_templates` foundation and avoids hard-coding one game.          |
+| User-facing surface  | Dedicated team-scoped game page              | The game is the visible concept; the round stays in the background as backing state.    |
+| Round creation       | Explicit start action                        | Avoids accidental sessions from simple navigation.                                      |
+| URL shape            | Team-scoped game URL                         | Keeps multi-team users unambiguous and shareable within the app.                        |
+| Response shape       | Single required text response, 500 chars max | Matches the current `response_text` storage contract and keeps S-02 small.              |
+| Post-submit state    | Saved/waiting state                          | Confirms success while leaving reveal behavior to `S-03`.                               |
+| Progress visibility  | Anonymous submitted count                    | Gives useful waiting feedback without exposing response content or identities.          |
 
 ## Scope
 
@@ -54,11 +54,11 @@ The dashboard lists templates from the service layer and links to team-scoped ga
 
 ## Phases at a Glance
 
-| Phase | What it delivers | Key risk |
-| --- | --- | --- |
-| 1. Active game contracts | Service and type contracts for current team/game rounds | Avoiding duplicate or ambiguous open rounds |
-| 2. Game routes and APIs | Team-scoped game page plus start and submit endpoints | Keeping round identity hidden but still robust |
-| 3. Dashboard integration and verification | Template picker, navigation, waiting state, and manual two-account checks | Not leaking reveal behavior into S-02 |
+| Phase                                     | What it delivers                                                          | Key risk                                       |
+| ----------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------- |
+| 1. Active game contracts                  | Service and type contracts for current team/game rounds                   | Avoiding duplicate or ambiguous open rounds    |
+| 2. Game routes and APIs                   | Team-scoped game page plus start and submit endpoints                     | Keeping round identity hidden but still robust |
+| 3. Dashboard integration and verification | Template picker, navigation, waiting state, and manual two-account checks | Not leaking reveal behavior into S-02          |
 
 **Prerequisites:** `S-01` is implemented and remote/local Supabase migrations are applied in schema `public`.
 **Estimated effort:** About 2-3 focused sessions across 3 phases.

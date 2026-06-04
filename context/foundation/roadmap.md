@@ -19,14 +19,14 @@ The north star here means the smallest user-visible milestone that proves the pr
 
 ## At a glance
 
-| ID | Change ID | Outcome | Prerequisites | PRD refs | Status |
-| --- | --- | --- | --- | --- | --- |
-| F-01 | F-01-team-and-game-data-foundation | Teams, memberships, game rounds, anonymous responses, and 30-day history storage exist with privacy rules enforced. | — | FR-002, FR-003, FR-005, FR-007, US-01 | ready |
-| S-01 | S-01-auth-and-team-setup | A signed-in user can create a team, use a visible email identity for teammate setup, add teammates, and see members join the team space. | F-01 | FR-001, FR-002, FR-003, US-01 | implemented |
-| S-02 | S-02-game-round-and-anonymous-submission | Any team member can open one micro-game and each teammate can submit exactly one anonymous response without a separate session flow. | S-01 | FR-004, FR-005, US-01 | implemented |
-| S-03 | S-03-shared-reveal-results | Participants see one shared results screen with every submitted response once the round ends. | S-02 | FR-006, US-01 | proposed |
-| S-04 | S-04-selected-game-history | Selected games leave a simple 30-day team history that the team owner can clear. | S-03 | FR-007, US-01 | proposed |
-| S-05 | S-05-release-hardening-and-acceptance | Shared reveal and history are hardened, CI-clean, and manually accepted for the MVP loop. | S-03, S-04 | FR-006, FR-007, US-01 | ready |
+| ID   | Change ID                                | Outcome                                                                                                                                  | Prerequisites | PRD refs                              | Status       |
+| ---- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------- | ------------ |
+| F-01 | F-01-team-and-game-data-foundation       | Teams, memberships, game rounds, anonymous responses, and 30-day history storage exist with privacy rules enforced.                      | —             | FR-002, FR-003, FR-005, FR-007, US-01 | ready        |
+| S-01 | S-01-auth-and-team-setup                 | A signed-in user can create a team, use a visible email identity for teammate setup, add teammates, and see members join the team space. | F-01          | FR-001, FR-002, FR-003, US-01         | implemented  |
+| S-02 | S-02-game-round-and-anonymous-submission | Any team member can open one micro-game and each teammate can submit exactly one anonymous response without a separate session flow.     | S-01          | FR-004, FR-005, US-01                 | implemented  |
+| S-03 | S-03-shared-reveal-results               | Participants see one shared results screen with every submitted response once the round ends.                                            | S-02          | FR-006, US-01                         | implemented  |
+| S-04 | S-04-selected-game-history               | Selected games leave a simple 30-day team history that the team owner can clear.                                                         | S-03          | FR-007, US-01                         | implemented  |
+| S-05 | S-05-release-hardening-and-acceptance    | Shared reveal and history are hardened, CI-clean, and manually accepted for the MVP loop.                                                | S-03, S-04    | FR-006, FR-007, US-01                 | implemented  |
 
 ## Baseline
 
@@ -48,10 +48,11 @@ Prerequisites: —
 Parallel with: —
 Blockers: —
 Unknowns:
+
 - What ballpark 30-day data volume should Bondify expect at the target scale? (Owner: user, Block: no)
-Risk: This comes first because every user-visible slice depends on stable team, response, and history storage; skipping it would force rework across the rest of the MVP path.
-Status: ready
-Unlocks: S-01, S-02, S-03, S-04
+  Risk: This comes first because every user-visible slice depends on stable team, response, and history storage; skipping it would force rework across the rest of the MVP path.
+  Status: ready
+  Unlocks: S-01, S-02, S-03, S-04
 
 ## Slices
 
@@ -76,9 +77,10 @@ Prerequisites: S-01
 Parallel with: —
 Blockers: —
 Unknowns:
+
 - What ballpark QPS should Bondify support in the first live version? (Owner: user, Block: no)
-Risk: This comes after team setup so the game flow can be built against real memberships and permissions instead of a throwaway single-user shortcut.
-Status: implemented
+  Risk: This comes after team setup so the game flow can be built against real memberships and permissions instead of a throwaway single-user shortcut.
+  Status: implemented
 
 ### S-03: Shared reveal results
 
@@ -90,7 +92,7 @@ Parallel with: —
 Blockers: —
 Unknowns: —
 Risk: This is the emotional payoff of the product, but putting it after submission keeps the reveal tied to real team participation instead of a mocked display.
-Status: proposed
+Status: implemented
 
 ### S-04: Selected-game history
 
@@ -101,9 +103,10 @@ Prerequisites: S-03
 Parallel with: —
 Blockers: —
 Unknowns:
+
 - Should history volume assumptions stay small enough that simple storage and cleanup rules remain acceptable for the MVP? (Owner: user, Block: no)
-Risk: History is intentionally last because it extends the core ritual loop rather than proving it; shipping it earlier would slow the shortest path to a usable team experience.
-Status: proposed
+  Risk: History is intentionally last because it extends the core ritual loop rather than proving it; shipping it earlier would slow the shortest path to a usable team experience.
+  Status: implemented
 
 ### S-05: Release hardening and acceptance
 
@@ -112,26 +115,21 @@ Change ID: S-05-release-hardening-and-acceptance
 PRD refs: FR-006, FR-007, US-01
 Prerequisites: S-03, S-04
 Parallel with: —
-Blockers:
-- S-03 and S-04 implementation-review findings remain untriaged.
-- Full `npm run lint` currently fails on repo-wide CRLF Prettier errors.
-Unknowns:
-- Should owner history clear be enforced through narrow Supabase RPCs, or is a narrower direct table policy acceptable for this MVP? (Owner: user, Block: yes)
-- Should repo-wide CRLF lint cleanup be included in this slice or split into a separate housekeeping change? (Owner: user, Block: yes)
-- Should manual acceptance be done as a scripted/browser-assisted pass or a human-only checklist? (Owner: user, Block: yes)
+Blockers: —
+Unknowns: —
 Risk: This slice is intentionally after S-03/S-04 because it should not add product scope; it closes review findings, tightens database enforcement, restores CI confidence, and proves the full team ritual manually before the roadmap moves on.
-Status: ready
+Status: implemented
 
 ## Backlog Handoff
 
-| Roadmap ID | Change ID | Outcome | Status |
-| --- | --- | --- | --- |
-| F-01 | F-01-team-and-game-data-foundation | Teams, memberships, game rounds, anonymous responses, and 30-day history storage exist with privacy rules enforced. | ready |
-| S-01 | S-01-auth-and-team-setup | A signed-in user can create a team, use a visible email identity for teammate setup, add teammates, and see members join the team space. | implemented |
-| S-02 | S-02-game-round-and-anonymous-submission | Any team member can open one micro-game and each teammate can submit exactly one anonymous response without a separate session flow. | implemented |
-| S-03 | S-03-shared-reveal-results | Participants see one shared results screen with every submitted response once the round ends. | proposed |
-| S-04 | S-04-selected-game-history | Selected games leave a simple 30-day team history that the team owner can clear. | proposed |
-| S-05 | S-05-release-hardening-and-acceptance | Shared reveal and history are hardened, CI-clean, and manually accepted for the MVP loop. | ready |
+| Roadmap ID | Change ID                                | Outcome                                                                                                                                  | Status       |
+| ---------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| F-01       | F-01-team-and-game-data-foundation       | Teams, memberships, game rounds, anonymous responses, and 30-day history storage exist with privacy rules enforced.                      | ready        |
+| S-01       | S-01-auth-and-team-setup                 | A signed-in user can create a team, use a visible email identity for teammate setup, add teammates, and see members join the team space. | implemented  |
+| S-02       | S-02-game-round-and-anonymous-submission | Any team member can open one micro-game and each teammate can submit exactly one anonymous response without a separate session flow.     | implemented  |
+| S-03       | S-03-shared-reveal-results               | Participants see one shared results screen with every submitted response once the round ends.                                            | implemented  |
+| S-04       | S-04-selected-game-history               | Selected games leave a simple 30-day team history that the team owner can clear.                                                         | implemented  |
+| S-05       | S-05-release-hardening-and-acceptance    | Shared reveal and history are hardened, CI-clean, and manually accepted for the MVP loop.                                                | implemented  |
 
 ## Open Roadmap Questions
 
@@ -151,3 +149,6 @@ Status: ready
 
 - S-01: Auth and team setup is implemented and verified in the deployed version.
 - S-02: Game round and anonymous submission is implemented and verified in the local version.
+- S-03: Shared reveal results is implemented and verified in the local version.
+- S-04: Selected-game history is implemented and verified in the local version.
+- S-05: Release hardening and acceptance is implemented and verified in the local version.

@@ -41,16 +41,16 @@ Implement roadmap slice `S-04` by adding a team-scoped history view for selected
 
 ## Confirmed Planning Decisions
 
-| Decision | Choice |
-| --- | --- |
-| History eligibility | Selected games only: `game_templates.is_history_enabled = true` |
-| History start | First accepted response starts the 30-day history clock |
-| Response-content gate | History only renders revealed rounds |
-| History location | Separate route: `/teams/<teamId>/history` |
-| Clear scope | Owner can clear all visible history or one entry |
-| Clear meaning | Set `history_cleared_at`; do not delete responses |
-| Viewer access | All active team members can view participant-safe history |
-| Layout | Group history entries by game template |
+| Decision              | Choice                                                          |
+| --------------------- | --------------------------------------------------------------- |
+| History eligibility   | Selected games only: `game_templates.is_history_enabled = true` |
+| History start         | First accepted response starts the 30-day history clock         |
+| Response-content gate | History only renders revealed rounds                            |
+| History location      | Separate route: `/teams/<teamId>/history`                       |
+| Clear scope           | Owner can clear all visible history or one entry                |
+| Clear meaning         | Set `history_cleared_at`; do not delete responses               |
+| Viewer access         | All active team members can view participant-safe history       |
+| Layout                | Group history entries by game template                          |
 
 ## Desired End State
 
@@ -151,7 +151,6 @@ Make history eligibility and retention correct at the service and database bound
    **Intent:** Prevent unrevealed response text from appearing through the history path.
 
    **Contract:** Update `getParticipantSafeHistory(teamId)` so it verifies membership and returns only rows that are all of:
-
    - `status = 'revealed'`
    - `game_template.is_history_enabled = true`
    - `history_visible_until` is not null and not expired
@@ -382,11 +381,11 @@ The MVP history window is bounded to 30 days and team sizes are expected to stay
 
 #### Manual
 
-- [ ] 2.4 Team member can open `/teams/<teamId>/history` and see grouped selected-game history
-- [ ] 2.5 Non-history-enabled game does not appear after play and reveal
-- [ ] 2.6 Non-owner member sees history without clear controls
-- [ ] 2.7 Owner can clear one history entry
-- [ ] 2.8 Owner can clear all visible history
+- [x] 2.4 Team member can open `/teams/<teamId>/history` and see grouped selected-game history
+- [x] 2.5 Non-history-enabled game does not appear after play and reveal
+- [x] 2.6 Non-owner member sees history without clear controls
+- [x] 2.7 Owner can clear one history entry
+- [x] 2.8 Owner can clear all visible history
 
 ### Phase 3: Dashboard Entry and End-to-End Verification
 
@@ -398,8 +397,8 @@ The MVP history window is bounded to 30 days and team sizes are expected to stay
 
 #### Manual
 
-- [ ] 3.4 Dashboard shows a working history link for the selected team
-- [ ] 3.5 History-enabled game appears in grouped history after start, submit, and reveal
-- [ ] 3.6 Live-only game remains absent from history after start, submit, and reveal
-- [ ] 3.7 Clearing a history entry does not delete its game reveal result
-- [ ] 3.8 Existing team creation, invite, submission, and reveal flows still work
+- [x] 3.4 Dashboard shows a working history link for the selected team
+- [x] 3.5 History-enabled game appears in grouped history after start, submit, and reveal
+- [x] 3.6 Live-only game remains absent from history after start, submit, and reveal
+- [x] 3.7 Clearing a history entry does not delete its game reveal result
+- [x] 3.8 Existing team creation, invite, submission, and reveal flows still work

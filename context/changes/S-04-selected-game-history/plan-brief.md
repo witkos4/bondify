@@ -17,15 +17,15 @@ A member can open `/teams/<teamId>/history` and see recently revealed results fo
 
 ## Key Decisions Made
 
-| Decision | Choice | Why |
-| --- | --- | --- |
-| Eligible games | Selected templates only | The PRD and roadmap say selected games, so `is_history_enabled` remains the source of truth. |
-| Retention start | First accepted response | A game counts as played once someone participates; reveal still gates response-content visibility. |
-| History surface | Separate team history page | Keeps dashboard density down and gives grouped history enough room. |
-| Layout | Group by game template | Supports comparing repeated rituals without adding detail routes. |
-| View access | All active team members | History is a shared team ritual record, matching reveal access and current membership model. |
-| Clear access | Team owner only | The PRD specifically grants manual clear to the owner. |
-| Clear behavior | Soft-hide from history | Uses existing schema, avoids data deletion, and leaves the game reveal intact. |
+| Decision        | Choice                     | Why                                                                                                |
+| --------------- | -------------------------- | -------------------------------------------------------------------------------------------------- |
+| Eligible games  | Selected templates only    | The PRD and roadmap say selected games, so `is_history_enabled` remains the source of truth.       |
+| Retention start | First accepted response    | A game counts as played once someone participates; reveal still gates response-content visibility. |
+| History surface | Separate team history page | Keeps dashboard density down and gives grouped history enough room.                                |
+| Layout          | Group by game template     | Supports comparing repeated rituals without adding detail routes.                                  |
+| View access     | All active team members    | History is a shared team ritual record, matching reveal access and current membership model.       |
+| Clear access    | Team owner only            | The PRD specifically grants manual clear to the owner.                                             |
+| Clear behavior  | Soft-hide from history     | Uses existing schema, avoids data deletion, and leaves the game reveal intact.                     |
 
 ## Scope
 
@@ -55,11 +55,11 @@ The response submission service marks eligible rounds with `history_visible_unti
 
 ## Phases at a Glance
 
-| Phase | What it delivers | Key risk |
-| --- | --- | --- |
-| 1. Retention and service contracts | First-response history markers, safer history reads, owner clear service methods, and RLS refinement | Exposing unrevealed response text or leaving owner-only clear as UI-only |
-| 2. History page and clear API | Team history route, grouped UI, flash handling, clear-all and clear-one forms | Accidentally showing identity or confusing clear semantics |
-| 3. Dashboard entry and verification | Dashboard link plus end-to-end selected/non-selected game checks | Regressing S-01 to S-03 flows while adding the final slice |
+| Phase                               | What it delivers                                                                                     | Key risk                                                                 |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| 1. Retention and service contracts  | First-response history markers, safer history reads, owner clear service methods, and RLS refinement | Exposing unrevealed response text or leaving owner-only clear as UI-only |
+| 2. History page and clear API       | Team history route, grouped UI, flash handling, clear-all and clear-one forms                        | Accidentally showing identity or confusing clear semantics               |
+| 3. Dashboard entry and verification | Dashboard link plus end-to-end selected/non-selected game checks                                     | Regressing S-01 to S-03 flows while adding the final slice               |
 
 **Prerequisites:** S-03 reveal flow works locally; Supabase is configured for the current environment.
 **Estimated effort:** Around 2 focused implementation sessions across 3 phases.

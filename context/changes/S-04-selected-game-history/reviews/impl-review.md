@@ -1,36 +1,37 @@
 <!-- IMPL-REVIEW-REPORT -->
+
 # Implementation Review: Selected Game History
 
 - **Plan**: `context/changes/S-04-selected-game-history/plan.md`
 - **Scope**: Phases 1-3
 - **Date**: 2026-06-04
-- **Verdict**: NEEDS ATTENTION
-- **Findings**: 0 critical, 2 warnings, 1 observation
+- **Verdict**: PASS
+- **Findings**: 0 open, 2 resolved warnings, 1 resolved observation
 
 ## Verdicts
 
-| Dimension | Verdict |
-|-----------|---------|
-| Plan Adherence | PASS |
-| Scope Discipline | PASS |
-| Safety & Quality | WARNING |
-| Architecture | WARNING |
-| Pattern Consistency | PASS |
-| Success Criteria | WARNING |
+| Dimension           | Verdict |
+| ------------------- | ------- |
+| Plan Adherence      | PASS    |
+| Scope Discipline    | PASS    |
+| Safety & Quality    | PASS    |
+| Architecture        | PASS    |
+| Pattern Consistency | PASS    |
+| Success Criteria    | PASS    |
 
 ## Summary
 
-The S-04 implementation follows the planned shape: history retention is marked after the first accepted response for history-enabled templates, participant-safe history reads are membership-checked and reveal-gated, the history page renders grouped anonymous results, and owner clear actions are exposed through a form-backed API route. The dashboard now links to the selected team's history page, and clear operations soft-hide history without changing the latest revealed game result path.
+The S-04 implementation follows the planned shape: history retention is marked after the first accepted response for history-enabled templates, participant-safe history reads are membership-checked and reveal-gated, the history page renders grouped anonymous results, and owner clear actions are exposed through a form-backed API route. The dashboard links to the selected team's history page, and clear operations soft-hide history without changing the latest revealed game result path.
 
-The main design risk is in the database policy. The app service only updates `history_cleared_at`, but the owner RLS policy grants a broader `UPDATE` path for owners on `game_rounds`. Automated slice checks passed, but full repo lint still fails because of CRLF Prettier errors outside the slice.
+The earlier database-boundary risk was resolved in S-05 by replacing the broad owner update policy with narrow `SECURITY DEFINER` clear RPCs. The earlier repo-wide CRLF lint failure was also resolved in S-05 by adding explicit LF guardrails and running a mechanical formatting pass. Manual acceptance is complete against the real local app flow.
 
 ## Verification
 
 - `npx supabase migration up --local` passed; local database was up to date.
 - `npx eslint src\types.ts src\lib\services\bondify.ts src\lib\history-flash.ts src\pages\api\teams\clear-history.ts "src\pages\teams\[teamId]\history.astro" src\pages\dashboard.astro` passed.
+- `npm run lint` passed after explicit LF guardrails and a repo-wide formatting pass in S-05.
 - `npm run build` passed.
 - `git diff --check` passed.
-- `npm run lint` failed with 1377 Prettier CRLF errors across existing repo files.
 
 ## Findings
 
@@ -52,7 +53,7 @@ The main design risk is in the database policy. The app service only updates `hi
 - **Location**: `AGENTS.md`
 - **Detail**: The S-04 targeted automated criteria passed, but repo rules and CI use `npm run lint`. Review-run `npm run lint` failed with repo-wide CRLF Prettier errors, so the branch may still fail CI even though the slice-local lint passed.
 - **Fix**: Normalize line endings repo-wide with the formatter or a dedicated LF cleanup, then rerun `npm run lint`.
-- **Decision**: PENDING
+- **Decision**: FIXED on 2026-06-04 in `context/changes/S-05-release-hardening-and-acceptance/` by adding explicit LF guardrails in `.prettierrc.json` and `.gitattributes`, running `npm run format`, and rerunning full-repo `npm run lint`.
 
 ### F3 — Manual history acceptance remains pending
 
@@ -60,6 +61,6 @@ The main design risk is in the database policy. The app service only updates `hi
 - **Impact**: LOW
 - **Dimension**: Success Criteria
 - **Location**: `context/changes/S-04-selected-game-history/plan.md:385`
-- **Detail**: Phase 2 and phase 3 manual checks remain unchecked, including grouped history visibility, live-only exclusion, non-owner clear-control omission, clear-one, clear-all, dashboard link, and regression checks for team/invite/submission/reveal flows.
-- **Fix**: Run the listed manual flows and update progress checkboxes only after verification.
-- **Decision**: PENDING
+- **Detail**: Local verification covered grouped history visibility for a history-enabled game, live-only exclusion, non-owner absence of clear controls, owner clear-one and clear-all, dashboard history link visibility, reveal-result preservation after clear, and regression checks for create/invite/submission/reveal flows.
+- **Fix**: Update the plan progress checkboxes to match the verified local behavior.
+- **Decision**: FIXED on 2026-06-04 via `npm run dev:local -- --host 127.0.0.1 --port 4321` using owner and non-owner member sessions against the real app flow.

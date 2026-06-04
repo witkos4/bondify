@@ -2,7 +2,7 @@
 id: S-04-selected-game-history
 roadmap_id: S-04
 title: Selected game history
-status: implementing
+status: implemented
 created: 2026-06-04
 updated: 2026-06-04
 ---

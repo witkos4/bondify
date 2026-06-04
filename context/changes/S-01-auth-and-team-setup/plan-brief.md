@@ -16,17 +16,17 @@ When this plan is done, a signed-in user lands on `/dashboard` and can create a 
 
 ## Key Decisions Made
 
-| Decision | Choice | Why (1 sentence) | Source |
-| --- | --- | --- | --- |
-| Authenticated home | Keep `/dashboard` as the team home | It reuses the existing protected route and gives later slices one stable post-login shell. | Plan |
-| Team UI scope | Show multi-team creation and switching in the UI | The user wants visible multi-team support now, with active-team switching via dropdown. | Plan |
-| Invite identifier | Email-based invites | This follows the accepted foundation decision even though older docs still mention usernames. | Plan |
-| Invite entry UX | Batch email invites | It fits real team kickoff behavior better than one-at-a-time invite submission. | Plan |
-| Roster UX | Members and pending invites in one list | It makes invite progress understandable without extra screens. | Plan |
-| Invite permissions | Any active member can invite | This matches the chosen MVP collaboration rule and avoids early role complexity. | Plan |
-| Invite acceptance | Explicit acceptance in dashboard | It is clearer and safer than silent auto-join while still keeping setup simple. | Plan |
-| Batch failure behavior | Partial success with row-level errors | One bad invite row should not block valid teammates from being added. | Plan |
-| Manual milestone | Two-account happy path | This is the smallest verification that proves real team setup works end to end. | Plan |
+| Decision               | Choice                                           | Why (1 sentence)                                                                              | Source |
+| ---------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------- | ------ |
+| Authenticated home     | Keep `/dashboard` as the team home               | It reuses the existing protected route and gives later slices one stable post-login shell.    | Plan   |
+| Team UI scope          | Show multi-team creation and switching in the UI | The user wants visible multi-team support now, with active-team switching via dropdown.       | Plan   |
+| Invite identifier      | Email-based invites                              | This follows the accepted foundation decision even though older docs still mention usernames. | Plan   |
+| Invite entry UX        | Batch email invites                              | It fits real team kickoff behavior better than one-at-a-time invite submission.               | Plan   |
+| Roster UX              | Members and pending invites in one list          | It makes invite progress understandable without extra screens.                                | Plan   |
+| Invite permissions     | Any active member can invite                     | This matches the chosen MVP collaboration rule and avoids early role complexity.              | Plan   |
+| Invite acceptance      | Explicit acceptance in dashboard                 | It is clearer and safer than silent auto-join while still keeping setup simple.               | Plan   |
+| Batch failure behavior | Partial success with row-level errors            | One bad invite row should not block valid teammates from being added.                         | Plan   |
+| Manual milestone       | Two-account happy path                           | This is the smallest verification that proves real team setup works end to end.               | Plan   |
 
 ## Scope
 
@@ -40,11 +40,11 @@ Use `/dashboard` as the single authenticated team home with conditional states f
 
 ## Phases at a Glance
 
-| Phase | What it delivers | Key risk |
-| --- | --- | --- |
-| 1. Team home shell and active-team context | Real dashboard shell, empty state, active-team switching | Choosing the wrong team-home contract now would force later slices to rework navigation |
-| 2. Team creation and roster management | Team creation, combined roster, batch invites with partial success | Weak batch-result handling would make invite UX brittle and confusing |
-| 3. Invite acceptance and end-to-end milestone verification | Explicit invite acceptance and full two-account setup flow | If invite acceptance is incomplete, `S-01` looks done but does not actually prove team setup works |
+| Phase                                                      | What it delivers                                                   | Key risk                                                                                           |
+| ---------------------------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| 1. Team home shell and active-team context                 | Real dashboard shell, empty state, active-team switching           | Choosing the wrong team-home contract now would force later slices to rework navigation            |
+| 2. Team creation and roster management                     | Team creation, combined roster, batch invites with partial success | Weak batch-result handling would make invite UX brittle and confusing                              |
+| 3. Invite acceptance and end-to-end milestone verification | Explicit invite acceptance and full two-account setup flow         | If invite acceptance is incomplete, `S-01` looks done but does not actually prove team setup works |
 
 **Prerequisites:** `F-01` must land first so profiles, teams, invites, and shared service contracts exist.
 **Estimated effort:** ~2-3 implementation sessions across 3 phases.

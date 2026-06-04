@@ -17,12 +17,12 @@ History clear is enforced by narrow Supabase RPCs that only set `history_cleared
 
 ## Key Decisions Made
 
-| Decision | Choice | Why |
-| --- | --- | --- |
-| Migration strategy | Follow-up migration | Keeps already-applied local migration history stable while superseding the broad policy. |
-| Clear enforcement | RPC-only clear | Makes the database enforce that clear is a soft-hide operation only. |
-| Lint cleanup | Include in S-05 | S-05 is the release gate, so it should end with `npm run lint` green. |
-| Acceptance method | Browser-assisted manual pass | Gives realistic MVP evidence without adding a Playwright harness now. |
+| Decision           | Choice                       | Why                                                                                      |
+| ------------------ | ---------------------------- | ---------------------------------------------------------------------------------------- |
+| Migration strategy | Follow-up migration          | Keeps already-applied local migration history stable while superseding the broad policy. |
+| Clear enforcement  | RPC-only clear               | Makes the database enforce that clear is a soft-hide operation only.                     |
+| Lint cleanup       | Include in S-05              | S-05 is the release gate, so it should end with `npm run lint` green.                    |
+| Acceptance method  | Browser-assisted manual pass | Gives realistic MVP evidence without adding a Playwright harness now.                    |
 
 ## Scope
 
@@ -50,11 +50,11 @@ Add a follow-up migration that drops `game_rounds_update_for_team_owner_history_
 
 ## Phases at a Glance
 
-| Phase | What it delivers | Key risk |
-| --- | --- | --- |
-| 1. RPC hardening | Follow-up migration plus service refactor for clear-all and clear-one | Breaking owner clear or leaving a direct broad update path |
-| 2. Lint cleanup | LF/Prettier normalization and full lint/build passing | Noisy diff obscures real logic changes |
-| 3. Browser acceptance and artifact closure | Manual S-03/S-04 verification plus plan/review status updates | Marking acceptance before behavior is actually proven |
+| Phase                                      | What it delivers                                                      | Key risk                                                   |
+| ------------------------------------------ | --------------------------------------------------------------------- | ---------------------------------------------------------- |
+| 1. RPC hardening                           | Follow-up migration plus service refactor for clear-all and clear-one | Breaking owner clear or leaving a direct broad update path |
+| 2. Lint cleanup                            | LF/Prettier normalization and full lint/build passing                 | Noisy diff obscures real logic changes                     |
+| 3. Browser acceptance and artifact closure | Manual S-03/S-04 verification plus plan/review status updates         | Marking acceptance before behavior is actually proven      |
 
 **Prerequisites:** S-03 and S-04 current implementations remain in the working tree; local Supabase and app dev server can run.
 **Estimated effort:** One focused hardening session plus one browser acceptance pass.

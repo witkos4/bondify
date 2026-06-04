@@ -10,10 +10,9 @@ S-03 and S-04 are implemented in the working tree:
 
 - S-03 adds shared reveal through `src/pages/api/games/reveal.ts`, `src/lib/game-flash.ts`, `src/lib/services/bondify.ts`, `src/types.ts`, and `src/pages/teams/[teamId]/games/[gameSlug].astro`.
 - S-04 adds selected-game history through `supabase/migrations/20260604030000_history_visibility_and_clear.sql`, `src/lib/history-flash.ts`, `src/pages/api/teams/clear-history.ts`, `src/pages/teams/[teamId]/history.astro`, `src/pages/dashboard.astro`, `src/lib/services/bondify.ts`, and `src/types.ts`.
-- Targeted ESLint, migration application, `npm run build`, and `git diff --check` passed during review.
-- Full `npm run lint` fails with 1377 Prettier CRLF errors across existing repo files.
-- S-04 implementation review flagged that `game_rounds_update_for_team_owner_history_clear` grants a broad team-owner `UPDATE` path on `public.game_rounds`, even though clear should only set `history_cleared_at`.
-- S-03 and S-04 manual acceptance checks remain open in their plans.
+- The S-05 hardening migration applies locally and the service clear methods now use narrow `SECURITY DEFINER` RPCs instead of direct table updates.
+- Full `npm run lint`, `npm run build`, and `git diff --check` now pass after explicit LF guardrails and a repo-wide formatting pass.
+- S-03 and S-04 manual acceptance have been verified locally, and their pending implementation-review decisions are now resolved.
 
 ## Desired End State
 
@@ -26,12 +25,12 @@ S-03 and S-04 are implemented in the working tree:
 
 ## Confirmed Planning Decisions
 
-| Decision | Choice |
-| --- | --- |
+| Decision           | Choice                                                                            |
+| ------------------ | --------------------------------------------------------------------------------- |
 | Migration strategy | Add a follow-up migration rather than amending the already-applied S-04 migration |
-| Clear enforcement | RPC-only clear through `SECURITY DEFINER` functions |
-| Lint cleanup | Include repo-wide CRLF/Prettier cleanup in S-05 as an isolated phase |
-| Acceptance method | Browser-assisted manual pass, not Playwright/E2E in this slice |
+| Clear enforcement  | RPC-only clear through `SECURITY DEFINER` functions                               |
+| Lint cleanup       | Include repo-wide CRLF/Prettier cleanup in S-05 as an isolated phase              |
+| Acceptance method  | Browser-assisted manual pass, not Playwright/E2E in this slice                    |
 
 ## Goals
 
@@ -83,7 +82,6 @@ Replace broad owner table-update access with narrow clear RPCs and update the se
    **Intent:** Close S-04 review finding F1 without rewriting the already-applied S-04 migration.
 
    **Contract:** The migration should:
-
    - drop policy `game_rounds_update_for_team_owner_history_clear` on `public.game_rounds`
    - keep `game_rounds_update_for_member_lifecycle` intact so reveal and first-response history marking still work for uncleared rounds
    - create `public.clear_team_history(team_uuid uuid)` as `security definer set search_path = public`
@@ -97,7 +95,6 @@ Replace broad owner table-update access with narrow clear RPCs and update the se
    **Intent:** Let the database clear all visible history rows for a team with one narrow operation.
 
    **Contract:** `public.clear_team_history(team_uuid uuid)` should:
-
    - check the current profile is the team creator and an active team member
    - update only rows where:
      - `game_rounds.team_id = team_uuid`
@@ -115,7 +112,6 @@ Replace broad owner table-update access with narrow clear RPCs and update the se
    **Intent:** Let the database clear one visible history entry while preserving the same visibility constraints as clear-all.
 
    **Contract:** `public.clear_team_history_entry(team_uuid uuid, round_uuid uuid)` should:
-
    - check the current profile is the team creator and an active team member
    - update only the matching visible history row using the same filters as clear-all
    - set `history_cleared_at` to a single timestamp value
@@ -128,7 +124,6 @@ Replace broad owner table-update access with narrow clear RPCs and update the se
    **Intent:** Remove direct table-update clear calls from the app service while preserving existing TypeScript result shapes and friendly domain errors.
 
    **Contract:** Update:
-
    - `clearTeamHistory(teamId)` to keep `requireTeamOwnerAccess()` for friendly errors, call `supabase.rpc("clear_team_history", { team_uuid: teamId })`, and return `TeamHistoryClearResult`
    - `clearTeamHistoryEntry({ teamId, roundId })` to keep `requireTeamOwnerAccess()`, call `supabase.rpc("clear_team_history_entry", { team_uuid: teamId, round_uuid: roundId })`, return `TeamHistoryEntryClearResult`, and throw `HISTORY_ENTRY_NOT_FOUND` when the RPC clears zero rows
    - avoid direct `.from("game_rounds").update({ history_cleared_at: ... })` in service clear methods
@@ -172,7 +167,6 @@ Normalize repo formatting so full `npm run lint` passes and the CRLF issue does 
    **Intent:** Reduce future drift between Windows checkouts and Prettier's LF expectations.
 
    **Contract:** Add explicit LF guardrails, for example:
-
    - `.prettierrc.json`: set `"endOfLine": "lf"`
    - `.gitattributes`: prefer `* text=auto eol=lf` unless repo constraints require a narrower rule
 
@@ -189,21 +183,18 @@ Normalize repo formatting so full `npm run lint` passes and the CRLF issue does 
    **Intent:** Close S-03 F1 and S-04 F2 review findings with command evidence.
 
    **Contract:** Run:
-
    - `npm run lint`
    - `npm run build`
    - `git diff --check`
 
 4. **Update S-03/S-04 review decisions**
    **Files**:
-
    - `context/changes/S-03-shared-reveal-results/reviews/impl-review.md`
    - `context/changes/S-04-selected-game-history/reviews/impl-review.md`
 
    **Intent:** Mark the lint-related findings fixed only after full lint passes.
 
    **Contract:** Change:
-
    - S-03 F1 `Decision: PENDING` to fixed with the lint cleanup
    - S-04 F2 `Decision: PENDING` to fixed with the lint cleanup
 
@@ -239,14 +230,12 @@ Verify the S-03/S-04 user flows through the running app, then update progress an
 
 2. **Verify S-03 reveal acceptance**
    **Files**:
-
    - `context/changes/S-03-shared-reveal-results/plan.md`
    - `context/changes/S-03-shared-reveal-results/reviews/impl-review.md`
 
    **Intent:** Close pending shared reveal acceptance.
 
    **Contract:** Verify:
-
    - invalid reveal payload redirects without an unhandled exception
    - non-member reveal is denied
    - zero-response reveal shows a friendly error
@@ -260,14 +249,12 @@ Verify the S-03/S-04 user flows through the running app, then update progress an
 
 3. **Verify S-04 history acceptance**
    **Files**:
-
    - `context/changes/S-04-selected-game-history/plan.md`
    - `context/changes/S-04-selected-game-history/reviews/impl-review.md`
 
    **Intent:** Close pending selected-game history acceptance.
 
    **Contract:** Verify:
-
    - dashboard shows a working history link for the selected team
    - history-enabled game appears in grouped history after start, submit, and reveal
    - live-only game remains absent from history after start, submit, and reveal
@@ -281,7 +268,6 @@ Verify the S-03/S-04 user flows through the running app, then update progress an
 
 4. **Update S-05 progress and change state**
    **Files**:
-
    - `context/changes/S-05-release-hardening-and-acceptance/plan.md`
    - `context/changes/S-05-release-hardening-and-acceptance/change.md`
 
@@ -359,48 +345,48 @@ The RPCs operate on visible 30-day history rows for one team. MVP team/history v
 
 #### Automated
 
-- [ ] 1.1 Follow-up migration applies cleanly with `npx supabase migration up --local`
+- [x] 1.1 Follow-up migration applies cleanly with `npx supabase migration up --local`
 - [x] 1.2 Targeted ESLint passes for `src/lib/services/bondify.ts`
 - [x] 1.3 `npm run build` passes after the service RPC refactor
 - [x] 1.4 No broad `game_rounds_update_for_team_owner_history_clear` policy remains active after the follow-up migration
 - [x] 1.5 Service clear methods no longer directly update `game_rounds.history_cleared_at`
 
-Note: `npx supabase migration up --local` timed out connecting to `127.0.0.1:54322` despite a healthy local DB container. The same migration SQL was applied cleanly in one transaction via `docker exec supabase_db_bondify psql`, and live DB inspection confirmed the broad policy is absent and the RPCs are `SECURITY DEFINER` functions executable only by `authenticated` and `postgres`.
+Note: `npx supabase migration up --local` now applies the follow-up migration cleanly against the local database. The broad owner update policy is absent and the clear RPCs remain the active database boundary.
 
 #### Manual
 
-- [ ] 1.6 Owner can clear one visible history entry after the RPC refactor
-- [ ] 1.7 Owner can clear all visible history after the RPC refactor
-- [ ] 1.8 Non-owner clear still fails through the API route
+- [x] 1.6 Owner can clear one visible history entry after the RPC refactor
+- [x] 1.7 Owner can clear all visible history after the RPC refactor
+- [x] 1.8 Non-owner clear still fails through the API route
 
 ### Phase 2: Repo Lint and Line-Ending Cleanup
 
 #### Automated
 
-- [ ] 2.1 LF guardrails are explicit in `.prettierrc.json` and `.gitattributes`
-- [ ] 2.2 `npm run format` completes
-- [ ] 2.3 `npm run lint` passes
-- [ ] 2.4 `npm run build` passes
-- [ ] 2.5 `git diff --check` passes
+- [x] 2.1 LF guardrails are explicit in `.prettierrc.json` and `.gitattributes`
+- [x] 2.2 `npm run format` completes
+- [x] 2.3 `npm run lint` passes
+- [x] 2.4 `npm run build` passes
+- [x] 2.5 `git diff --check` passes
 
 #### Manual
 
-- [ ] 2.6 Formatting diff is reviewed as mechanical
+- [x] 2.6 Formatting diff is reviewed as mechanical
 
 ### Phase 3: Browser-Assisted Acceptance and Artifact Closure
 
 #### Automated
 
-- [ ] 3.1 `npm run lint` passes after artifact updates
-- [ ] 3.2 `npm run build` passes after artifact updates
-- [ ] 3.3 `git diff --check` passes after artifact updates
+- [x] 3.1 `npm run lint` passes after artifact updates
+- [x] 3.2 `npm run build` passes after artifact updates
+- [x] 3.3 `git diff --check` passes after artifact updates
 
 #### Manual
 
-- [ ] 3.4 S-03 invalid reveal and reveal edge cases are verified and marked complete
-- [ ] 3.5 S-03 two-user shared reveal and anonymity checks are verified and marked complete
-- [ ] 3.6 S-04 grouped history, live-only exclusion, and non-owner UI checks are verified and marked complete
-- [ ] 3.7 S-04 clear-one, clear-all, and reveal-result preservation checks are verified and marked complete
-- [ ] 3.8 Existing team creation, invite, submission, and reveal flows still work
-- [ ] 3.9 S-03 and S-04 implementation-review pending decisions are resolved
-- [ ] 3.10 S-05 `change.md` is updated to `implemented` after all checks pass
+- [x] 3.4 S-03 invalid reveal and reveal edge cases are verified and marked complete
+- [x] 3.5 S-03 two-user shared reveal and anonymity checks are verified and marked complete
+- [x] 3.6 S-04 grouped history, live-only exclusion, and non-owner UI checks are verified and marked complete
+- [x] 3.7 S-04 clear-one, clear-all, and reveal-result preservation checks are verified and marked complete
+- [x] 3.8 Existing team creation, invite, submission, and reveal flows still work
+- [x] 3.9 S-03 and S-04 implementation-review pending decisions are resolved
+- [x] 3.10 S-05 `change.md` is updated to `implemented` after all checks pass

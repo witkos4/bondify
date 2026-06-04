@@ -2,14 +2,14 @@
 id: S-05-release-hardening-and-acceptance
 roadmap_id: S-05
 title: Release hardening and acceptance
-status: implementing
+status: implemented
 created: 2026-06-04
 updated: 2026-06-04
 ---
 
 ## Summary
 
-Close the S-03 and S-04 implementation-review findings before treating the shared reveal plus selected-game history loop as shippable. This slice should tighten owner-only history clear enforcement, resolve or explicitly split the full-lint CRLF blocker, and complete manual acceptance for the reveal/history MVP path.
+Close the S-03 and S-04 implementation-review findings before treating the shared reveal plus selected-game history loop as shippable. This slice tightened owner-only history clear enforcement, resolved the full-repo CRLF lint blocker with explicit LF guardrails plus a mechanical formatting pass, and completed manual acceptance for the reveal/history MVP path.
 
 ## Roadmap Link
 

@@ -16,15 +16,15 @@ When this plan is done, the app will have a stable schema and server-side contra
 
 ## Key Decisions Made
 
-| Decision | Choice | Why (1 sentence) | Source |
-| --- | --- | --- | --- |
-| Teammate identity | Email-based invites | It removes username setup work and keeps the MVP path faster, even though it changes the PRD wording. | Plan |
-| Invite timing | Allow invites before sign-up | Pending invites are only useful if teams can add people before those people register. | Plan |
-| Membership model | Many-to-many user/team membership | It matches “create or join a team” and avoids a boxed-in single-team schema. | Plan |
-| Invite lifecycle | Separate pending invite records | It keeps unresolved invites distinct from active membership and simplifies later claim flows. | Plan |
-| Anonymity model | App-level anonymity only | The MVP stores responder identity for integrity and hides it through service/query contracts. | Plan |
-| Retention handling | Metadata now, automation later | It keeps the schema aligned with the 30-day rule without pulling in background-job scope. | Plan |
-| Game structure | Template -> round -> response | This supports selected games and history without duplicating data in a separate history table. | Plan |
+| Decision           | Choice                            | Why (1 sentence)                                                                                      | Source |
+| ------------------ | --------------------------------- | ----------------------------------------------------------------------------------------------------- | ------ |
+| Teammate identity  | Email-based invites               | It removes username setup work and keeps the MVP path faster, even though it changes the PRD wording. | Plan   |
+| Invite timing      | Allow invites before sign-up      | Pending invites are only useful if teams can add people before those people register.                 | Plan   |
+| Membership model   | Many-to-many user/team membership | It matches “create or join a team” and avoids a boxed-in single-team schema.                          | Plan   |
+| Invite lifecycle   | Separate pending invite records   | It keeps unresolved invites distinct from active membership and simplifies later claim flows.         | Plan   |
+| Anonymity model    | App-level anonymity only          | The MVP stores responder identity for integrity and hides it through service/query contracts.         | Plan   |
+| Retention handling | Metadata now, automation later    | It keeps the schema aligned with the 30-day rule without pulling in background-job scope.             | Plan   |
+| Game structure     | Template -> round -> response     | This supports selected games and history without duplicating data in a separate history table.        | Plan   |
 
 ## Scope
 
@@ -38,11 +38,11 @@ Use Supabase Auth only for authentication, then add an app-owned domain layer ar
 
 ## Phases at a Glance
 
-| Phase | What it delivers | Key risk |
-| --- | --- | --- |
-| 1. Domain schema and access rules | Core tables, constraints, retention fields, and RLS | Early RLS mistakes can force every later slice into workarounds |
-| 2. App-facing types and service contracts | Reusable TypeScript and server-side domain contracts | Weak contracts would leak raw-table assumptions into later features |
-| 3. Reference data, verification path, and doc alignment | Selected games, verified assumptions, and aligned product docs | Product-doc drift could send `S-01` down the wrong invite model |
+| Phase                                                   | What it delivers                                               | Key risk                                                            |
+| ------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------- |
+| 1. Domain schema and access rules                       | Core tables, constraints, retention fields, and RLS            | Early RLS mistakes can force every later slice into workarounds     |
+| 2. App-facing types and service contracts               | Reusable TypeScript and server-side domain contracts           | Weak contracts would leak raw-table assumptions into later features |
+| 3. Reference data, verification path, and doc alignment | Selected games, verified assumptions, and aligned product docs | Product-doc drift could send `S-01` down the wrong invite model     |
 
 **Prerequisites:** local Supabase workflow available, current auth flows remain the session source, and this change stays focused on foundation-only work.
 **Estimated effort:** ~2-3 implementation sessions across 3 phases.

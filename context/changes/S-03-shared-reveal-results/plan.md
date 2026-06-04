@@ -198,13 +198,13 @@ No database migration is expected. The existing `game_rounds.status`, `revealed_
 
 - [x] 1.1 Lint passes with the reveal service and API route
 - [x] 1.2 Build passes with the new route
-- [ ] 1.3 Invalid reveal form payloads redirect without unhandled exceptions
+- [x] 1.3 Invalid reveal form payloads redirect without unhandled exceptions
 
 #### Manual
 
-- [ ] 1.4 Non-member reveal is denied
-- [ ] 1.5 Zero-response reveal shows a friendly error
-- [ ] 1.6 Already revealed or closed round shows a friendly error
+- [x] 1.4 Non-member reveal is denied
+- [x] 1.5 Zero-response reveal shows a friendly error
+- [x] 1.6 Already revealed or closed round shows a friendly error
 
 ### Phase 2: Shared Results UI
 
@@ -215,7 +215,7 @@ No database migration is expected. The existing `game_rounds.status`, `revealed_
 
 #### Manual
 
-- [ ] 2.3 User A can reveal a submitted round
-- [ ] 2.4 User B sees the same shared results
-- [ ] 2.5 Response identity remains hidden
-- [ ] 2.6 Submit form is hidden after reveal
+- [x] 2.3 User A can reveal a submitted round
+- [x] 2.4 User B sees the same shared results
+- [x] 2.5 Response identity remains hidden
+- [x] 2.6 Submit form is hidden after reveal
