@@ -10,7 +10,7 @@ const { shell = null }: Props = Astro.props;
 const activeTeam = shell?.activeTeam ?? null;
 const hasMultipleTeams = (shell?.teams.length ?? 0) > 1;
 const dashboardHref = activeTeam ? `/dashboard?team=${encodeURIComponent(activeTeam.id)}` : "/dashboard";
-const managementHref = dashboardHref;
+const managementHref = `${dashboardHref}#management`;
 ---
 
 <div

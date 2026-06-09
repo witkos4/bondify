@@ -296,31 +296,31 @@ No database migration is required. The main compatibility change is behavioral: 
 
 #### Automated
 
-- [x] 1.1 Authenticated entry routes build cleanly
-- [x] 1.2 Updated shell component passes lint
+- [x] 1.1 Authenticated entry routes build cleanly — c380243
+- [x] 1.2 Updated shell component passes lint — c380243
 
 #### Manual
 
-- [x] 1.3 Visiting `/` with no session still shows the public landing page
-- [x] 1.4 Visiting `/` with a valid session redirects directly to `/dashboard`
-- [x] 1.5 Successful sign-in lands on `/dashboard` instead of the public welcome page
-- [x] 1.6 Visiting `/auth/signin` or `/auth/signup` with a valid session redirects directly to `/dashboard`
-- [x] 1.7 Visiting `/auth/confirm-email` remains possible even when a valid session exists
-- [x] 1.8 The authenticated top bar shows the user email, stable shell navigation, and sign out
+- [x] 1.3 Visiting `/` with no session still shows the public landing page — c380243
+- [x] 1.4 Visiting `/` with a valid session redirects directly to `/dashboard` — c380243
+- [x] 1.5 Successful sign-in lands on `/dashboard` instead of the public welcome page — c380243
+- [x] 1.6 Visiting `/auth/signin` or `/auth/signup` with a valid session redirects directly to `/dashboard` — c380243
+- [x] 1.7 Visiting `/auth/confirm-email` remains possible even when a valid session exists — c380243
+- [x] 1.8 The authenticated top bar shows the user email, stable shell navigation, and sign out — c380243
 
 ### Phase 2: Member-First Dashboard Overview
 
 #### Automated
 
-- [ ] 2.1 Dashboard shell changes build cleanly
-- [ ] 2.2 Dashboard overview changes pass lint
+- [x] 2.1 Dashboard shell changes build cleanly
+- [x] 2.2 Dashboard overview changes pass lint
 
 #### Manual
 
-- [ ] 2.3 A signed-in user with multiple teams can switch teams in one action and see the selected team reload
-- [ ] 2.4 A signed-in user with one team sees the member-first overview without a redundant switch action
-- [ ] 2.5 A signed-in user with no teams stays in an authenticated create-first state on `/dashboard`
-- [ ] 2.6 Game entry appears as the primary content, while invites, roster, and team creation remain accessible but visually secondary
+- [x] 2.3 A signed-in user with multiple teams can switch teams in one action and see the selected team reload
+- [x] 2.4 A signed-in user with one team sees the member-first overview without a redundant switch action
+- [x] 2.5 A signed-in user with no teams stays in an authenticated create-first state on `/dashboard`
+- [x] 2.6 Game entry appears as the primary content, while invites, roster, and team creation remain accessible but visually secondary
 
 ### Phase 3: Shared Shell Across Authenticated Team Pages
 
