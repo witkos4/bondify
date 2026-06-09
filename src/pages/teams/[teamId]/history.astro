@@ -20,7 +20,12 @@ const services = createBondifyServices({
   cookies: Astro.cookies,
 });
 
-const historyStateResult = await callBondifyService(() => services.getTeamHistoryState(decodedTeamId));
+const [shellContextResult, historyStateResult] = await Promise.all([
+  callBondifyService(() => services.getShellContext({ preferredTeamId: decodedTeamId })),
+  callBondifyService(() => services.getTeamHistoryState(decodedTeamId)),
+]);
+
+const shell = shellContextResult.data;
 const historyState: TeamHistoryState | null = historyStateResult.data;
 const historyFlash = consumeHistoryFlash(Astro.cookies);
 const matchingFlash = historyFlash?.teamId === decodedTeamId ? historyFlash : null;
@@ -81,7 +86,7 @@ const hasHistory = historyGroups.length > 0;
 <Layout title={pageTitle}>
   <div class="bg-cosmic min-h-screen">
     <div class="mx-auto max-w-6xl px-4 py-4 sm:px-8">
-      <Topbar />
+      <Topbar shell={shell} />
 
       <main class="mt-8 space-y-6 pb-12">
         {

@@ -312,25 +312,25 @@ No database migration is required. The main compatibility change is behavioral: 
 
 #### Automated
 
-- [x] 2.1 Dashboard shell changes build cleanly
-- [x] 2.2 Dashboard overview changes pass lint
+- [x] 2.1 Dashboard shell changes build cleanly — 35c19e4
+- [x] 2.2 Dashboard overview changes pass lint — 35c19e4
 
 #### Manual
 
-- [x] 2.3 A signed-in user with multiple teams can switch teams in one action and see the selected team reload
-- [x] 2.4 A signed-in user with one team sees the member-first overview without a redundant switch action
-- [x] 2.5 A signed-in user with no teams stays in an authenticated create-first state on `/dashboard`
-- [x] 2.6 Game entry appears as the primary content, while invites, roster, and team creation remain accessible but visually secondary
+- [x] 2.3 A signed-in user with multiple teams can switch teams in one action and see the selected team reload — 35c19e4
+- [x] 2.4 A signed-in user with one team sees the member-first overview without a redundant switch action — 35c19e4
+- [x] 2.5 A signed-in user with no teams stays in an authenticated create-first state on `/dashboard` — 35c19e4
+- [x] 2.6 Game entry appears as the primary content, while invites, roster, and team creation remain accessible but visually secondary — 35c19e4
 
 ### Phase 3: Shared Shell Across Authenticated Team Pages
 
 #### Automated
 
-- [ ] 3.1 Authenticated team pages compile cleanly with the shared shell
-- [ ] 3.2 Shared shell usage across pages passes lint
+- [x] 3.1 Authenticated team pages compile cleanly with the shared shell
+- [x] 3.2 Shared shell usage across pages passes lint
 
 #### Manual
 
-- [ ] 3.3 The game page and history page both show the authenticated top bar with the active team context
-- [ ] 3.4 Switching teams from either authenticated team page returns to the selected-team dashboard in one action
-- [ ] 3.5 The management link from authenticated pages lands in the dashboard management section until `S-08` replaces it
+- [x] 3.3 The game page and history page both show the authenticated top bar with the active team context
+- [x] 3.4 Switching teams from either authenticated team page returns to the selected-team dashboard in one action
+- [x] 3.5 The management link from authenticated pages lands in the dashboard management section until `S-08` replaces it
