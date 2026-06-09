@@ -1,23 +1,67 @@
 ---
+import type { BondifyShellContext } from "@/types";
+
+interface Props {
+  shell?: BondifyShellContext | null;
+}
+
 const { user } = Astro.locals;
+const { shell = null }: Props = Astro.props;
+const activeTeam = shell?.activeTeam ?? null;
+const hasMultipleTeams = (shell?.teams.length ?? 0) > 1;
+const dashboardHref = activeTeam ? `/dashboard?team=${encodeURIComponent(activeTeam.id)}` : "/dashboard";
+const managementHref = dashboardHref;
 ---
 
 <div
-  class="mb-4 flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80"
+  class="mb-4 flex flex-col gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80 sm:flex-row sm:items-center sm:justify-between"
 >
   {
     user ? (
       <>
-        <span class="text-blue-100/70">{user.email}</span>
-        <div class="flex items-center gap-3">
-          <a href="/dashboard" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
-            Dashboard
-          </a>
-          <form method="POST" action="/api/auth/signout">
-            <button type="submit" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
-              Sign out
-            </button>
-          </form>
+        <div class="flex min-w-0 flex-col gap-1">
+          <span class="truncate text-blue-100/70">{shell?.viewerEmail ?? user.email}</span>
+          {activeTeam && (
+            <span class="text-xs font-semibold tracking-[0.2em] text-cyan-200/70 uppercase">
+              Active team: {activeTeam.name}
+            </span>
+          )}
+        </div>
+
+        <div class="flex flex-col gap-3 sm:items-end">
+          {hasMultipleTeams && shell ? (
+            <form method="GET" action="/dashboard">
+              <label class="sr-only" for="topbar-team-switcher">
+                Switch active team
+              </label>
+              <select
+                id="topbar-team-switcher"
+                name="team"
+                class="w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-sm text-white transition outline-none focus:border-cyan-300/70 sm:min-w-56"
+                onchange="this.form?.requestSubmit()"
+              >
+                {shell.teams.map((team) => (
+                  <option value={team.id} selected={team.id === activeTeam?.id} class="bg-slate-950 text-white">
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </form>
+          ) : null}
+
+          <div class="flex flex-wrap items-center gap-3">
+            <a href={dashboardHref} class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
+              Games
+            </a>
+            <a href={managementHref} class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
+              Team management
+            </a>
+            <form method="POST" action="/api/auth/signout">
+              <button type="submit" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
+                Sign out
+              </button>
+            </form>
+          </div>
         </div>
       </>
     ) : (

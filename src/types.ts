@@ -121,6 +121,19 @@ export interface TeamInviteCreateResult {
   errorMessage: string | null;
 }
 
+export interface BondifyShellTeamOption {
+  id: string;
+  name: string;
+  memberCount: number;
+  pendingInviteCount: number;
+}
+
+export interface BondifyShellContext {
+  viewerEmail: string;
+  teams: BondifyShellTeamOption[];
+  activeTeam: BondifyShellTeamOption | null;
+}
+
 export interface ParticipantSafeResponse {
   id: string;
   roundId: string;

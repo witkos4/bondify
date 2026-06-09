@@ -1,0 +1,15 @@
+# Lessons Learned
+
+> Append-only register of recurring rules and patterns. Re-read at start by /10x-frame, /10x-research, /10x-plan, /10x-plan-review, /10x-implement, /10x-impl-review.
+
+## Treat Supabase Seed Data Separately From Schema Migrations
+
+- **Context**: Post-deploy verification and debugging for Bondify features that depend on reference data in Supabase tables, especially `public.game_templates`.
+- **Problem**: The remote database schema can be fully up to date while the product still appears broken because required seed data was never pushed. In this chat, the dashboard showed "No game templates are available yet" even after migrations were current, because the hosted `game_templates` table was empty.
+- **Rule**: When a Supabase-backed feature depends on reference rows, verify seed data separately from schema migrations. If schema matches but the UI shows missing catalog/template data, check whether the linked remote database needs `supabase/seed.sql` applied.
+
+## Default To Local Verification After User-Facing Auth And Shell Changes
+
+- **Context**: Local verification for the authenticated member shell work in `S-06`, including redirects, dashboard entry, Docker/Supabase recovery after a reboot, and manual confirmation of browser-visible behavior.
+- **Problem**: Without an explicit prompt, an agent might stop after code changes or terminal checks and leave user-facing regressions undiscovered, especially when localhost failures are caused by the environment rather than the code.
+- **Rule**: After user-facing auth, dashboard, routing, or shell/navigation changes, default to local verification before declaring the work done. Prefer browser-level verification when browser tooling is available; otherwise use HTTP probes plus a focused manual checklist. If localhost appears broken, check the app server, Docker Desktop, WSL2/virtualization, and local Supabase services before assuming the implementation itself is broken.

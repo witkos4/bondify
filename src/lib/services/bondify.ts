@@ -6,6 +6,8 @@ import type {
   BondifyDomainErrorCode,
   BondifyGameResponseRecord,
   BondifyGameRound,
+  BondifyShellContext,
+  BondifyShellTeamOption,
   BondifyGameTemplate,
   BondifyGameTemplateProjection,
   BondifyProfile,
@@ -612,6 +614,15 @@ function toTeamInviteView(row: TeamInviteWithAcceptedProfileRow): TeamInviteView
   };
 }
 
+function toShellTeamOption(row: TeamSummaryRow): BondifyShellTeamOption {
+  return {
+    id: row.id,
+    name: row.name,
+    memberCount: row.team_memberships.length,
+    pendingInviteCount: row.team_invites.filter((invite) => invite.status === "pending").length,
+  };
+}
+
 async function listTeamSummaryRows(supabase: SupabaseServerClient): Promise<TeamSummaryRow[]> {
   const { data, error } = await supabase
     .from("teams")
@@ -840,6 +851,21 @@ export function createBondifyServices(context: ServiceContext) {
           memberships: row.team_memberships.map(toTeamRosterEntry),
           pendingInvites: row.team_invites.filter((invite) => invite.status === "pending").map(toTeamInviteView),
         }));
+      });
+    },
+
+    async getShellContext(input?: { preferredTeamId?: string | null }): Promise<BondifyShellContext> {
+      return withCurrentProfile(async (supabase, profile) => {
+        const rows = await listTeamSummaryRows(supabase);
+        const teams = rows.map(toShellTeamOption);
+        const preferredTeamId = input?.preferredTeamId;
+        const activeTeam = teams.find((team) => team.id === preferredTeamId) ?? teams.at(0) ?? null;
+
+        return {
+          viewerEmail: profile.email,
+          teams,
+          activeTeam,
+        };
       });
     },
 

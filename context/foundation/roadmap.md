@@ -1,154 +1,144 @@
 ---
 project: Bondify
-version: 1
-status: proposed
-created: 2026-05-27
-updated: 2026-06-04
-prd_version: 1
+version: 2
+status: draft
+created: 2026-06-05
+updated: 2026-06-05
+prd_version: 2
 main_goal: speed
-top_blocker: time
+top_blocker: decisions
 ---
+
+# Roadmap: Bondify
+
+> Derived from `context/foundation/prd-v2.md` (v2) + auto-researched codebase baseline.
+> Edit-in-place; archive when superseded.
+> Slices below are listed in dependency order. The "At a glance" table is the index.
 
 ## Vision recap
 
-Bondify is ordered around one job: help a newly formed team build rapport through a fast shared ritual instead of a heavyweight team-building event. This roadmap is biased toward speed, so it strips the MVP to the shortest sequence that can get a team from sign-in to shared participation without adding side systems that do not directly support that path.
+Bondify already works as a team micro-game app, but the current member journey is still too fragmented for repeat daily use. This roadmap focuses on the shortest revision path that makes a signed-in member land in the right team context immediately, see the right game choices, and complete the daily ritual without team-management clutter taking over the main experience.
+
+The main product bet in this revision is that a cleaner member-first shell plus a stronger Emoji Check-In ritual will make Bondify feel ready for real team habits, while the existing auth, invite, and multi-team backbone stays intact.
 
 ## North star
 
-The north star here means the smallest user-visible milestone that proves the product can start a team ritual in the real world. For this roadmap, that milestone is **S-01**, because getting a signed-in user through team creation and teammate setup is the first point where Bondify becomes usable by an actual team instead of a solo visitor.
+**S-07: Team member can complete today's Emoji Check-In from the selected team overview** - This is the north star here, meaning the smallest end-to-end slice whose success proves the revised product is genuinely usable as a daily team ritual, and it is placed as early as S-06 allows.
 
 ## At a glance
 
-| ID   | Change ID                                | Outcome                                                                                                                                  | Prerequisites | PRD refs                              | Status       |
-| ---- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------- | ------------ |
-| F-01 | F-01-team-and-game-data-foundation       | Teams, memberships, game rounds, anonymous responses, and 30-day history storage exist with privacy rules enforced.                      | —             | FR-002, FR-003, FR-005, FR-007, US-01 | ready        |
-| S-01 | S-01-auth-and-team-setup                 | A signed-in user can create a team, use a visible email identity for teammate setup, add teammates, and see members join the team space. | F-01          | FR-001, FR-002, FR-003, US-01         | implemented  |
-| S-02 | S-02-game-round-and-anonymous-submission | Any team member can open one micro-game and each teammate can submit exactly one anonymous response without a separate session flow.     | S-01          | FR-004, FR-005, US-01                 | implemented  |
-| S-03 | S-03-shared-reveal-results               | Participants see one shared results screen with every submitted response once the round ends.                                            | S-02          | FR-006, US-01                         | implemented  |
-| S-04 | S-04-selected-game-history               | Selected games leave a simple 30-day team history that the team owner can clear.                                                         | S-03          | FR-007, US-01                         | implemented  |
-| S-05 | S-05-release-hardening-and-acceptance    | Shared reveal and history are hardened, CI-clean, and manually accepted for the MVP loop.                                                | S-03, S-04    | FR-006, FR-007, US-01                 | implemented  |
+| ID | Change ID | Outcome (user can ...) | Prerequisites | PRD refs | Status |
+|---|---|---|---|---|---|
+| S-06 | member-games-overview-shell | User can land directly in the selected team games overview, see the signed-in shell, and switch teams in one action. | - | US-01 | ready |
+| S-07 | daily-emoji-check-in-loop | User can enter today's Emoji Check-In, submit emoji-only reactions once, see the reveal, and compare the last 30 days. | S-06 | US-02 | proposed |
+| S-08 | team-management-page-separation | User can leave the member-first games overview and reach team-management actions on their own dedicated page. | S-06 | US-01 | proposed |
+| S-09 | two-truths-structured-round | User can join a structured Two Truths and a Lie round with teammate voting and no self-guessing. | S-06 | US-03 | blocked |
+
+## Streams
+
+Navigation aid - groups items that share a Prerequisites chain. Canonical ordering still lives in the dependency graph below; this table is the proposed reading order across parallel tracks.
+
+| Stream | Theme | Chain | Note |
+|---|---|---|---|
+| A | Member entry and daily ritual | `S-06` -> `S-07` | This is the must-have path for the speed-biased roadmap because it proves the revised member flow in daily use. |
+| B | Team management separation | `S-08` | Depends on `S-06`, but stays separate so the member-first shell can land before owner-facing cleanup expands. |
+| C | Second game redesign | `S-09` | Depends on `S-06` and stays blocked until the open game-rule decisions are answered. |
 
 ## Baseline
 
-- Frontend: present. The app already has a working server-rendered web shell and interactive UI support.
-- Backend/API: partial. Authentication routes exist, but team, game, response, reveal, and history flows are not yet implemented.
-- Data: partial. The project is set up to use a hosted data platform, but Bondify domain storage for teams, games, responses, and history is not yet evidenced.
-- Auth: present. Sign-in, sign-up, session handling, and protected-route checks already exist.
-- Deploy/infra: present. The app already has a deployment target and CI validation path.
-- Observability: absent. No dedicated launch monitoring path is currently evidenced.
+What's already in place in the codebase as of `2026-06-05` (auto-researched + user-confirmed).
+Foundations below assume these are present and do NOT re-scaffold them.
+
+- **Frontend:** present - server-rendered routes and shared shell already exist in `src/pages/dashboard.astro`, `src/pages/teams/[teamId]/games/[gameSlug].astro`, and `src/components/Topbar.astro`.
+- **Backend / API:** present - auth, team, and game handlers already exist under `src/pages/api/auth/`, `src/pages/api/teams/`, and `src/pages/api/games/`.
+- **Data:** present - Supabase schema, RLS, seed data, and service-layer logic already exist in `supabase/migrations/20260530090000_team_and_game_foundation.sql`, `supabase/seed.sql`, and `src/lib/services/bondify.ts`.
+- **Auth:** present - SSR Supabase session handling and route protection already exist in `src/lib/supabase.ts` and `src/middleware.ts`.
+- **Deploy / infra:** present - Cloudflare worker deployment and CI scaffolding already exist in `wrangler.jsonc` and `.github/workflows/ci.yml`.
+- **Observability:** partial - Wrangler observability is enabled in `wrangler.jsonc`, but no richer app-level monitoring path is yet evident.
 
 ## Foundations
 
-### F-01: Team and game data foundation
-
-Outcome: Teams, memberships, game rounds, anonymous responses, and 30-day history storage exist with privacy rules enforced.
-Change ID: F-01-team-and-game-data-foundation
-PRD refs: FR-002, FR-003, FR-005, FR-007, US-01
-Prerequisites: —
-Parallel with: —
-Blockers: —
-Unknowns:
-
-- What ballpark 30-day data volume should Bondify expect at the target scale? (Owner: user, Block: no)
-  Risk: This comes first because every user-visible slice depends on stable team, response, and history storage; skipping it would force rework across the rest of the MVP path.
-  Status: ready
-  Unlocks: S-01, S-02, S-03, S-04
+No dedicated foundations are required for this roadmap. The brownfield baseline already covers auth, API, data, and deploy scaffolding well enough that the revision can stay vertical from the first slice instead of pausing for cross-cutting setup.
 
 ## Slices
 
-### S-01: Auth and team setup
+### S-06: Authenticated member shell and team context
 
-Outcome: A signed-in user can create a team, use a visible email identity for teammate setup, add teammates, and see members join the team space.
-Change ID: S-01-auth-and-team-setup
-PRD refs: FR-001, FR-002, FR-003, US-01
-Prerequisites: F-01
-Parallel with: —
-Blockers: —
-Unknowns: —
-Risk: This is sequenced first because the chosen speed strategy needs a usable multi-user entry path before deeper gameplay work can be validated with real teams.
-Status: implemented
+- **Outcome:** User can land directly in the selected team games overview, see the signed-in shell, and switch teams in one action.
+- **Change ID:** member-games-overview-shell
+- **PRD refs:** US-01
+- **Prerequisites:** -
+- **Parallel with:** -
+- **Blockers:** -
+- **Unknowns:** -
+- **Risk:** This comes first because every later revision assumes the product already lands the member in the right team context; delaying it would force deeper game work onto the wrong shell.
+- **Status:** ready
 
-### S-02: Game round and anonymous submission
+### S-07: Daily Emoji Check-In ritual
 
-Outcome: Any team member can open one micro-game and each teammate can submit exactly one anonymous response without a separate session flow.
-Change ID: S-02-game-round-and-anonymous-submission
-PRD refs: FR-004, FR-005, US-01
-Prerequisites: S-01
-Parallel with: —
-Blockers: —
-Unknowns:
+- **Outcome:** User can enter today's Emoji Check-In, submit emoji-only reactions once, see the reveal, and compare the last 30 days.
+- **Change ID:** daily-emoji-check-in-loop
+- **PRD refs:** US-02
+- **Prerequisites:** S-06
+- **Parallel with:** S-08
+- **Blockers:** -
+- **Unknowns:** -
+- **Risk:** This is the first full proof that the revised product creates a repeatable team ritual instead of only cleaning up navigation, so it should follow the shell immediately.
+- **Status:** proposed
 
-- What ballpark QPS should Bondify support in the first live version? (Owner: user, Block: no)
-  Risk: This comes after team setup so the game flow can be built against real memberships and permissions instead of a throwaway single-user shortcut.
-  Status: implemented
+### S-08: Team-management page separation
 
-### S-03: Shared reveal results
+- **Outcome:** User can leave the member-first games overview and reach team-management actions on their own dedicated page.
+- **Change ID:** team-management-page-separation
+- **PRD refs:** US-01
+- **Prerequisites:** S-06
+- **Parallel with:** S-07
+- **Blockers:** -
+- **Unknowns:** -
+- **Risk:** This stays behind the member shell because separating owner actions is valuable, but it should not delay the core member entry and daily game path.
+- **Status:** proposed
 
-Outcome: Participants see one shared results screen with every submitted response once the round ends.
-Change ID: S-03-shared-reveal-results
-PRD refs: FR-006, US-01
-Prerequisites: S-02
-Parallel with: —
-Blockers: —
-Unknowns: —
-Risk: This is the emotional payoff of the product, but putting it after submission keeps the reveal tied to real team participation instead of a mocked display.
-Status: implemented
+### S-09: Structured Two Truths and a Lie round
 
-### S-04: Selected-game history
-
-Outcome: Selected games leave a simple 30-day team history that the team owner can clear.
-Change ID: S-04-selected-game-history
-PRD refs: FR-007, US-01
-Prerequisites: S-03
-Parallel with: —
-Blockers: —
-Unknowns:
-
-- Should history volume assumptions stay small enough that simple storage and cleanup rules remain acceptable for the MVP? (Owner: user, Block: no)
-  Risk: History is intentionally last because it extends the core ritual loop rather than proving it; shipping it earlier would slow the shortest path to a usable team experience.
-  Status: implemented
-
-### S-05: Release hardening and acceptance
-
-Outcome: Shared reveal and selected-game history are hardened, CI-clean, and manually accepted for the MVP loop.
-Change ID: S-05-release-hardening-and-acceptance
-PRD refs: FR-006, FR-007, US-01
-Prerequisites: S-03, S-04
-Parallel with: —
-Blockers: —
-Unknowns: —
-Risk: This slice is intentionally after S-03/S-04 because it should not add product scope; it closes review findings, tightens database enforcement, restores CI confidence, and proves the full team ritual manually before the roadmap moves on.
-Status: implemented
+- **Outcome:** User can join a structured Two Truths and a Lie round with teammate voting and no self-guessing.
+- **Change ID:** two-truths-structured-round
+- **PRD refs:** US-03
+- **Prerequisites:** S-06
+- **Parallel with:** S-07, S-08
+- **Blockers:** -
+- **Unknowns:**
+  - How should Two Truths and a Lie scoring work? - Owner: user. Block: yes.
+  - Are Two Truths and a Lie guesses anonymous or visible? - Owner: user. Block: yes.
+  - When should Two Truths and a Lie results be revealed: immediately or only after all votes? - Owner: user. Block: yes.
+  - Should Two Truths and a Lie run as a daily ritual, an on-demand game, or a session-based activity? - Owner: user. Block: yes.
+- **Risk:** This slice is intentionally blocked because the unresolved game rules would otherwise force churn in both the interaction model and the stored round data.
+- **Status:** blocked
 
 ## Backlog Handoff
 
-| Roadmap ID | Change ID                                | Outcome                                                                                                                                  | Status       |
-| ---------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| F-01       | F-01-team-and-game-data-foundation       | Teams, memberships, game rounds, anonymous responses, and 30-day history storage exist with privacy rules enforced.                      | ready        |
-| S-01       | S-01-auth-and-team-setup                 | A signed-in user can create a team, use a visible email identity for teammate setup, add teammates, and see members join the team space. | implemented  |
-| S-02       | S-02-game-round-and-anonymous-submission | Any team member can open one micro-game and each teammate can submit exactly one anonymous response without a separate session flow.     | implemented  |
-| S-03       | S-03-shared-reveal-results               | Participants see one shared results screen with every submitted response once the round ends.                                            | implemented  |
-| S-04       | S-04-selected-game-history               | Selected games leave a simple 30-day team history that the team owner can clear.                                                         | implemented  |
-| S-05       | S-05-release-hardening-and-acceptance    | Shared reveal and history are hardened, CI-clean, and manually accepted for the MVP loop.                                                | implemented  |
+| Roadmap ID | Change ID | Suggested issue title | Ready for `/10x-plan` | Notes |
+|---|---|---|---|---|
+| S-06 | member-games-overview-shell | Member-first landing, signed-in shell, and one-action team switching | yes | Run `/10x-plan S-06-member-games-overview-shell` |
+| S-07 | daily-emoji-check-in-loop | Daily Emoji Check-In with emoji-only input, reveal, and 30-day timeline | no | Wait for `S-06`, then plan immediately as the north star slice. |
+| S-08 | team-management-page-separation | Separate team-management page while keeping member overview focused | no | Wait for `S-06`; can run after or alongside `S-07`. |
+| S-09 | two-truths-structured-round | Structured Two Truths and a Lie multiplayer round | no | Resolve the open game-rule decisions first. |
 
 ## Open Roadmap Questions
 
-- What ballpark QPS should Bondify support in the first live version? Owner: user. Why it matters: it sets how conservative the first gameplay and reveal path needs to be.
-- What ballpark 30-day data volume should Bondify expect at the target scale? Owner: user. Why it matters: it shapes how much lifecycle and cleanup work the history slice should absorb in the MVP.
+1. **What is the expected ballpark QPS for the revised product flow?** - Owner: user. Block: none currently.
+2. **What is the expected ballpark data volume for the revised product flow?** - Owner: user. Block: none currently.
+3. **How should Two Truths and a Lie scoring work?** - Owner: user. Block: S-09.
+4. **Are Two Truths and a Lie guesses anonymous or visible?** - Owner: user. Block: S-09.
+5. **When should Two Truths and a Lie results be revealed: immediately or only after all votes?** - Owner: user. Block: S-09.
+6. **Should Two Truths and a Lie run as a daily ritual, an on-demand game, or a session-based activity?** - Owner: user. Block: S-09.
 
 ## Parked
 
-- Team chat, video, or meeting features stay parked because the MVP is meant to create connection rituals, not replace communication tools.
-- Individual teammate analytics or scoring stay parked because the MVP should not rank or profile people.
-- Advanced admin features and multi-workspace management stay parked because the first version is focused on one lightweight team space at a time.
-- Long-term archives beyond the 30-day history window stay parked because recent interaction history is enough for the MVP.
-- Dedicated observability investment stays parked unless launch feedback shows reliability gaps that the current lightweight path cannot cover.
-- Unique team-name enforcement stays parked for a later stage; the current MVP setup flow allows duplicate team names while the product validates the core team ritual.
+- **Auth model rewrite** - Why parked: the PRD explicitly preserves the current auth and session model, so this revision should not widen into identity redesign.
+- **Owner/member role redesign** - Why parked: the PRD says the problem is navigation and gameplay flow, not a new permission model.
+- **Strict preservation of old game URLs** - Why parked: the PRD explicitly allows route changes when they improve the revised experience.
+- **Strict preservation of old revision-sensitive game data** - Why parked: the PRD explicitly allows discarding old game data if the redesigned flows are simpler or safer to land that way.
+- **Forcing full dashboard replacement inside this revision** - Why parked: the PRD allows team-management actions to remain on the dashboard temporarily if the two-week window gets tight.
+- **Finalizing all Two Truths and a Lie rules inside this roadmap pass** - Why parked: the PRD keeps scoring, anonymity, reveal timing, and cadence open for later clarification.
 
 ## Done
-
-- S-01: Auth and team setup is implemented and verified in the deployed version.
-- S-02: Game round and anonymous submission is implemented and verified in the local version.
-- S-03: Shared reveal results is implemented and verified in the local version.
-- S-04: Selected-game history is implemented and verified in the local version.
-- S-05: Release hardening and acceptance is implemented and verified in the local version.
