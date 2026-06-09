@@ -326,11 +326,11 @@ No database migration is required. The main compatibility change is behavioral: 
 
 #### Automated
 
-- [x] 3.1 Authenticated team pages compile cleanly with the shared shell
-- [x] 3.2 Shared shell usage across pages passes lint
+- [x] 3.1 Authenticated team pages compile cleanly with the shared shell — e3fe234
+- [x] 3.2 Shared shell usage across pages passes lint — e3fe234
 
 #### Manual
 
-- [x] 3.3 The game page and history page both show the authenticated top bar with the active team context
-- [x] 3.4 Switching teams from either authenticated team page returns to the selected-team dashboard in one action
-- [x] 3.5 The management link from authenticated pages lands in the dashboard management section until `S-08` replaces it
+- [x] 3.3 The game page and history page both show the authenticated top bar with the active team context — e3fe234
+- [x] 3.4 Switching teams from either authenticated team page returns to the selected-team dashboard in one action — e3fe234
+- [x] 3.5 The management link from authenticated pages lands in the dashboard management section until `S-08` replaces it — e3fe234
