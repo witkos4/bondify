@@ -1,6 +1,7 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import Topbar from "@/components/Topbar.astro";
+import { isEmojiCheckInTemplateSlug } from "@/lib/emoji-check-in";
 import { consumeGameFlash } from "@/lib/game-flash";
 import { callBondifyService, createBondifyServices } from "@/lib/services/bondify";
 import type { TeamGameState } from "@/types";
@@ -10,6 +11,7 @@ export const prerender = false;
 const { teamId = "", gameSlug = "" } = Astro.params;
 const decodedTeamId = decodeURIComponent(teamId);
 const decodedGameSlug = decodeURIComponent(gameSlug);
+const isEmojiCheckInRoute = isEmojiCheckInTemplateSlug(decodedGameSlug);
 const services = createBondifyServices({
   requestHeaders: Astro.request.headers,
   cookies: Astro.cookies,
@@ -17,12 +19,17 @@ const services = createBondifyServices({
 
 const [shellContextResult, gameStateResult] = await Promise.all([
   callBondifyService(() => services.getShellContext({ preferredTeamId: decodedTeamId })),
-  callBondifyService(() =>
-    services.getTeamGameState({
-      teamId: decodedTeamId,
-      gameSlug: decodedGameSlug,
-    }),
-  ),
+  isEmojiCheckInRoute
+    ? Promise.resolve({
+        data: null,
+        error: null,
+      })
+    : callBondifyService(() =>
+        services.getTeamGameState({
+          teamId: decodedTeamId,
+          gameSlug: decodedGameSlug,
+        }),
+      ),
 ]);
 
 const shell = shellContextResult.data;
@@ -32,10 +39,22 @@ const matchingFlash = gameFlash?.teamId === decodedTeamId && gameFlash.gameSlug 
 const errorMessage = gameStateResult.error?.message ?? null;
 const activeRound = gameState?.activeRound ?? null;
 const revealedRound = gameState?.revealedRound ?? null;
+const twoTruthsRound = gameState?.twoTruthsRound ?? null;
 const hasSubmitted = activeRound?.hasCurrentMemberSubmitted ?? false;
 const submittedCount = activeRound?.submittedResponseCount ?? 0;
 const responseTextareaValue = matchingFlash?.type === "response-submit-error" ? matchingFlash.responseText : "";
-const pageTitle = gameState ? `${gameState.template.name} | Bondify` : "Team game | Bondify";
+const twoTruthsStatementOneValue = matchingFlash?.type === "two-truths-entry-error" ? matchingFlash.statementOne : "";
+const twoTruthsStatementTwoValue = matchingFlash?.type === "two-truths-entry-error" ? matchingFlash.statementTwo : "";
+const twoTruthsStatementThreeValue =
+  matchingFlash?.type === "two-truths-entry-error" ? matchingFlash.statementThree : "";
+const twoTruthsLieStatementIndexValue =
+  matchingFlash?.type === "two-truths-entry-error" ? matchingFlash.lieStatementIndex : "";
+const dashboardEmojiCheckInHref = `/dashboard?team=${encodeURIComponent(decodedTeamId)}#emoji-check-in`;
+const pageTitle = isEmojiCheckInRoute
+  ? "Emoji Check-In | Bondify"
+  : gameState
+    ? `${gameState.template.name} | Bondify`
+    : "Team game | Bondify";
 
 function formatResultTime(createdAt: string) {
   return new Intl.DateTimeFormat("en", {
@@ -52,7 +71,32 @@ function formatResultTime(createdAt: string) {
 
       <main class="mt-8 pb-12">
         {
-          gameState ? (
+          isEmojiCheckInRoute ? (
+            <section class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-8">
+              <p class="text-xs font-semibold tracking-[0.28em] text-amber-100/75 uppercase">Dashboard handoff</p>
+              <h1 class="mt-3 text-4xl font-semibold text-white sm:text-5xl">
+                Emoji Check-In lives on the dashboard now
+              </h1>
+              <p class="mt-4 max-w-2xl text-base leading-7 text-blue-100/75">
+                Today's team mood ritual is now inline on the selected-team dashboard so everyone shares one equal,
+                current view instead of splitting across two completion flows.
+              </p>
+              <div class="mt-6 flex flex-col gap-3 sm:flex-row">
+                <a
+                  href={dashboardEmojiCheckInHref}
+                  class="inline-flex justify-center rounded-2xl bg-cyan-400/90 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                >
+                  Go to today's Emoji Check-In
+                </a>
+                <a
+                  href={`/dashboard?team=${encodeURIComponent(decodedTeamId)}`}
+                  class="inline-flex justify-center rounded-2xl border border-white/15 px-5 py-3 text-sm font-semibold text-blue-100 transition hover:bg-white/10"
+                >
+                  Back to dashboard
+                </a>
+              </div>
+            </section>
+          ) : gameState ? (
             <div class="space-y-6">
               <section class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-8">
                 <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -75,6 +119,9 @@ function formatResultTime(createdAt: string) {
                       "mt-6 rounded-3xl border p-4 text-sm leading-6",
                       matchingFlash.type === "game-started" ||
                       matchingFlash.type === "response-submitted" ||
+                      matchingFlash.type === "two-truths-entry-submitted" ||
+                      matchingFlash.type === "two-truths-collection-closed" ||
+                      matchingFlash.type === "two-truths-vote-submitted" ||
                       matchingFlash.type === "game-revealed"
                         ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100"
                         : "border-red-500/30 bg-red-900/40 text-red-200",
@@ -86,7 +133,133 @@ function formatResultTime(createdAt: string) {
               </section>
 
               <section class="rounded-[2rem] border border-white/12 bg-slate-950/35 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
-                {revealedRound !== null ? (
+                {twoTruthsRound !== null ? (
+                  <div class="space-y-6">
+                    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                      <div class="max-w-2xl">
+                        <p class="text-xs font-semibold tracking-[0.25em] text-amber-100/75 uppercase">
+                          Structured round
+                        </p>
+                        <h2 class="mt-2 text-3xl font-semibold">
+                          {twoTruthsRound.structuredRound.phase === "collecting"
+                            ? "Collection is open"
+                            : twoTruthsRound.structuredRound.phase === "voting"
+                              ? "Voting is active"
+                              : "Reveal is ready"}
+                        </h2>
+                        <p class="mt-3 text-sm leading-6 text-blue-100/65">
+                          {twoTruthsRound.structuredRound.phase === "collecting"
+                            ? "Phase 1 switches this game onto the structured contract. Each teammate submits one set of three statements and locks it in."
+                            : twoTruthsRound.structuredRound.phase === "voting"
+                              ? "The backend voting model is ready. The richer teammate-by-teammate voting UI lands in the next implementation phase."
+                              : "The backend reveal state is ready. A richer reveal summary UI lands in the next implementation phase."}
+                        </p>
+                      </div>
+                      <div class="rounded-3xl border border-white/10 bg-white/6 px-5 py-4 text-right">
+                        <p class="text-xs font-semibold tracking-[0.2em] text-blue-100/50 uppercase">Submitted sets</p>
+                        <p class="mt-2 text-4xl font-semibold text-white">{twoTruthsRound.entries.length}</p>
+                      </div>
+                    </div>
+
+                    {twoTruthsRound.structuredRound.phase === "collecting" ? (
+                      twoTruthsRound.hasCurrentMemberSubmitted ? (
+                        <div class="rounded-3xl border border-emerald-300/20 bg-emerald-300/10 p-5">
+                          <p class="text-xs font-semibold tracking-[0.2em] text-emerald-100/70 uppercase">Locked in</p>
+                          <h3 class="mt-2 text-2xl font-semibold">Your set is saved</h3>
+                          <p class="mt-3 text-sm leading-6 text-emerald-50/80">
+                            You cannot edit it now. The next phase adds explicit collection close and team voting.
+                          </p>
+                        </div>
+                      ) : (
+                        <form method="POST" action="/api/games/two-truths-entry" class="space-y-5">
+                          <input type="hidden" name="teamId" value={gameState.teamId} />
+                          <input type="hidden" name="gameSlug" value={gameState.template.slug} />
+                          <input type="hidden" name="roundId" value={twoTruthsRound.round.id} />
+                          <div class="grid gap-4">
+                            <div>
+                              <label class="block text-sm font-medium text-blue-100/75" for="statement-one">
+                                Statement 1
+                              </label>
+                              <textarea
+                                id="statement-one"
+                                name="statementOne"
+                                rows="3"
+                                maxlength="200"
+                                required
+                                placeholder="Write a short statement..."
+                                class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
+                              >
+                                {twoTruthsStatementOneValue}
+                              </textarea>
+                            </div>
+                            <div>
+                              <label class="block text-sm font-medium text-blue-100/75" for="statement-two">
+                                Statement 2
+                              </label>
+                              <textarea
+                                id="statement-two"
+                                name="statementTwo"
+                                rows="3"
+                                maxlength="200"
+                                required
+                                placeholder="Write a short statement..."
+                                class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
+                              >
+                                {twoTruthsStatementTwoValue}
+                              </textarea>
+                            </div>
+                            <div>
+                              <label class="block text-sm font-medium text-blue-100/75" for="statement-three">
+                                Statement 3
+                              </label>
+                              <textarea
+                                id="statement-three"
+                                name="statementThree"
+                                rows="3"
+                                maxlength="200"
+                                required
+                                placeholder="Write a short statement..."
+                                class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
+                              >
+                                {twoTruthsStatementThreeValue}
+                              </textarea>
+                            </div>
+                          </div>
+
+                          <fieldset>
+                            <legend class="text-sm font-medium text-blue-100/75">Which statement is the lie?</legend>
+                            <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                              {[1, 2, 3].map((index) => (
+                                <label class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm">
+                                  <input
+                                    type="radio"
+                                    name="lieStatementIndex"
+                                    value={index}
+                                    checked={twoTruthsLieStatementIndexValue === String(index)}
+                                    class="h-4 w-4"
+                                  />
+                                  Statement {index}
+                                </label>
+                              ))}
+                            </div>
+                          </fieldset>
+
+                          <button
+                            type="submit"
+                            class="w-full rounded-2xl bg-cyan-400/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                          >
+                            Save structured set
+                          </button>
+                        </form>
+                      )
+                    ) : (
+                      <div class="rounded-3xl border border-white/10 bg-white/6 p-5 text-sm leading-6 text-blue-100/75">
+                        The collection, voting, and reveal contracts are ready in the service layer. The next phase
+                        replaces this placeholder with the full teammate voting experience.
+                      </div>
+                    )}
+                  </div>
+                ) : revealedRound !== null ? (
                   <div class="space-y-6">
                     <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                       <div class="max-w-2xl">

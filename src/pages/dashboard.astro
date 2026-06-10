@@ -1,9 +1,19 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import Topbar from "@/components/Topbar.astro";
+import EmojiCheckInPicker from "@/components/emoji-check-in/EmojiCheckInPicker.tsx";
+import EmojiCheckInReveal from "@/components/emoji-check-in/EmojiCheckInReveal.tsx";
+import { EMOJI_CHECK_IN_OPTIONS, EMOJI_CHECK_IN_TEMPLATE_SLUG } from "@/lib/emoji-check-in";
 import { consumeDashboardFlash } from "@/lib/dashboard-flash";
 import { callBondifyService, createBondifyServices } from "@/lib/services/bondify";
-import type { BondifyGameTemplate, TeamInviteCreateResult, TeamSummary, TeamInviteView } from "@/types";
+import type {
+  BondifyGameTemplate,
+  EmojiCheckInTimelineEntry,
+  EmojiCheckInTodayState,
+  TeamInviteCreateResult,
+  TeamSummary,
+  TeamInviteView,
+} from "@/types";
 
 const { user } = Astro.locals;
 const services = createBondifyServices({
@@ -32,6 +42,31 @@ if (teamSummaries.length > 0) {
   selectedTeam = teamSummaries.find((summary) => summary.team.id === shellActiveTeamId) ?? teamSummaries[0];
 }
 
+let emojiCheckInState: EmojiCheckInTodayState | null = null;
+let emojiCheckInTimeline: EmojiCheckInTimelineEntry[] = [];
+let emojiCheckInErrorMessage: string | null = null;
+
+if (selectedTeam) {
+  const [emojiCheckInStateResult, emojiCheckInTimelineResult] = await Promise.all([
+    callBondifyService(() =>
+      services.getTodayEmojiCheckInState({
+        teamId: selectedTeam.team.id,
+      }),
+    ),
+    callBondifyService(() =>
+      services.getEmojiCheckInTimeline({
+        teamId: selectedTeam.team.id,
+        days: 30,
+      }),
+    ),
+  ]);
+
+  emojiCheckInState = emojiCheckInStateResult.data;
+  emojiCheckInTimeline = emojiCheckInTimelineResult.data ?? [];
+  emojiCheckInErrorMessage =
+    emojiCheckInStateResult.error?.message ?? emojiCheckInTimelineResult.error?.message ?? null;
+}
+
 const hasMemberships = selectedTeam !== null;
 const activeTeamId = selectedTeam ? selectedTeam.team.id : "";
 const activeTeamName = selectedTeam ? selectedTeam.team.name : "No active team selected";
@@ -50,6 +85,30 @@ const inviteResults: TeamInviteCreateResult[] = inviteFlash?.teamId === activeTe
 const inviteResultSuccessCount = inviteResults.filter((result) => result.ok).length;
 const inviteResultFailureCount = inviteResults.length - inviteResultSuccessCount;
 const gameTemplatesErrorMessage = gameTemplatesResult.error?.message ?? null;
+const emojiCheckInTemplate = gameTemplates.find((template) => template.slug === EMOJI_CHECK_IN_TEMPLATE_SLUG) ?? null;
+const linkedGameTemplates = gameTemplates.filter((template) => template.slug !== EMOJI_CHECK_IN_TEMPLATE_SLUG);
+const emojiCheckInSubmittedFlash =
+  dashboardFlash?.type === "emoji-check-in-submitted" && dashboardFlash.teamId === activeTeamId ? dashboardFlash : null;
+const emojiCheckInSubmitErrorFlash =
+  dashboardFlash?.type === "emoji-check-in-submit-error" && dashboardFlash.teamId === activeTeamId
+    ? dashboardFlash
+    : null;
+const emojiCheckInRevealedFlash =
+  dashboardFlash?.type === "emoji-check-in-revealed" && dashboardFlash.teamId === activeTeamId ? dashboardFlash : null;
+const emojiCheckInRevealErrorFlash =
+  dashboardFlash?.type === "emoji-check-in-reveal-error" && dashboardFlash.teamId === activeTeamId
+    ? dashboardFlash
+    : null;
+const emojiCheckInFlash =
+  emojiCheckInSubmitErrorFlash ??
+  emojiCheckInRevealErrorFlash ??
+  emojiCheckInRevealedFlash ??
+  emojiCheckInSubmittedFlash;
+const emojiCheckInPickerInitialEmojis = emojiCheckInSubmitErrorFlash?.emojis ?? [];
+const shouldTriggerEmojiCheckInBurst =
+  emojiCheckInRevealedFlash?.sessionId !== undefined &&
+  emojiCheckInRevealedFlash.sessionId === emojiCheckInState?.session.id;
+const gamesOverviewErrorMessage = emojiCheckInErrorMessage ?? gameTemplatesErrorMessage;
 
 function formatInviteLabel(invite: TeamInviteView) {
   return `Pending invite for ${invite.invite.email} to join team ${invite.invite.teamId}.`;
@@ -81,6 +140,14 @@ function gameHref(teamId: string, gameSlug: string) {
 function historyHref(teamId: string) {
   return `/teams/${encodeURIComponent(teamId)}/history`;
 }
+
+function formatEmojiCheckInDate(value: string, options?: Intl.DateTimeFormatOptions) {
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    ...options,
+  }).format(new Date(`${value}T00:00:00Z`));
+}
 ---
 
 <Layout title="Dashboard">
@@ -101,14 +168,14 @@ function historyHref(teamId: string) {
                 >
                   {
                     hasMemberships
-                      ? `Choose a game for ${activeTeamName}`
+                      ? `Start today's check-in with ${activeTeamName}`
                       : `Welcome back${user?.email ? `, ${user.email}` : ""}.`
                   }
                 </h1>
                 <p class="mt-4 max-w-2xl text-base leading-7 text-blue-100/75">
                   {
                     hasMemberships
-                      ? "Your selected team now lands on a member-first dashboard. Start with the available games, then drop into invites, roster, and team setup only when you need them."
+                      ? "Your selected team now lands on a member-first dashboard. Begin with the daily Emoji Check-In, then branch into linked games, invites, roster, and team setup only when you need them."
                       : "You’re signed in and inside the authenticated shell. Create your first team here, and Bondify will promote it into the games overview without sending you back through the public landing page."
                   }
                 </p>
@@ -133,10 +200,10 @@ function historyHref(teamId: string) {
                   )
                 }
                 <a
-                  href={hasMemberships ? "#games-overview" : "#management"}
+                  href={hasMemberships ? "#emoji-check-in" : "#management"}
                   class="mt-4 inline-flex rounded-2xl border border-white/10 px-4 py-3 text-sm font-semibold text-blue-100 transition hover:bg-white/10"
                 >
-                  {hasMemberships ? "Jump to games" : "Create your first team"}
+                  {hasMemberships ? "Jump to today's ritual" : "Create your first team"}
                 </a>
               </div>
             </div>
@@ -216,10 +283,13 @@ function historyHref(teamId: string) {
                 <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                   <div class="max-w-2xl">
                     <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Games overview</p>
-                    <h2 class="mt-2 text-3xl font-semibold">Start from the team ritual, not the admin work</h2>
+                    <h2 class="mt-2 text-3xl font-semibold">
+                      Start with today's ritual, then branch into the other games
+                    </h2>
                     <p class="mt-3 text-sm leading-6 text-blue-100/65">
-                      Open a team-scoped game page when your team is ready. This slice keeps the current game catalog
-                      honest and server-rendered while the daily flow arrives in `S-07`.
+                      Emoji Check-In now lives here on the selected-team dashboard. The rest of the game catalog stays
+                      linked and equally reachable for deeper prompts whenever your team wants something beyond today's
+                      mood signal.
                     </p>
                   </div>
                   <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -227,43 +297,259 @@ function historyHref(teamId: string) {
                       href={historyHref(activeTeamId)}
                       class="inline-flex justify-center rounded-2xl border border-white/15 px-4 py-3 text-sm font-semibold text-blue-100 transition hover:bg-white/10"
                     >
-                      View history
+                      View linked game history
                     </a>
                     <div class="rounded-3xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-blue-100/65">
-                      {gameTemplates.length} available game{gameTemplates.length === 1 ? "" : "s"}
+                      {linkedGameTemplates.length} linked game{linkedGameTemplates.length === 1 ? "" : "s"}
                     </div>
                   </div>
                 </div>
 
-                {gameTemplatesErrorMessage && (
+                {gamesOverviewErrorMessage && (
                   <div class="mt-5 rounded-3xl border border-red-500/30 bg-red-900/40 p-4 text-sm leading-6 text-red-300">
-                    {gameTemplatesErrorMessage}
+                    {gamesOverviewErrorMessage}
                   </div>
                 )}
 
-                {gameTemplates.length > 0 ? (
-                  <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {gameTemplates.map((template) => (
-                      <article class="flex min-h-56 flex-col rounded-3xl border border-white/10 bg-white/6 p-5">
-                        <p class="text-xs font-semibold tracking-[0.2em] text-cyan-100/60 uppercase">
-                          {template.isHistoryEnabled ? "History-ready" : "Live only"}
+                <section
+                  id="emoji-check-in"
+                  class="mt-6 rounded-[2rem] border border-amber-200/15 bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.16),_transparent_38%),linear-gradient(135deg,rgba(15,23,42,0.94),rgba(8,47,73,0.9))] p-6 shadow-xl shadow-black/25"
+                >
+                  <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div class="max-w-2xl">
+                      <p class="text-xs font-semibold tracking-[0.22em] text-amber-100/70 uppercase">Today's ritual</p>
+                      <h3 class="mt-2 text-3xl font-semibold text-white">
+                        {emojiCheckInTemplate?.name ?? "Emoji Check-In"}
+                      </h3>
+                      <p class="mt-3 text-sm leading-6 text-blue-100/75">
+                        {emojiCheckInTemplate?.prompt ??
+                          "Pick one to three emojis that capture how today feels for your team."}
+                      </p>
+                    </div>
+
+                    {emojiCheckInState && (
+                      <div class="rounded-3xl border border-white/10 bg-slate-950/30 px-4 py-3 text-right">
+                        <p class="text-xs tracking-[0.2em] text-blue-100/45 uppercase">Team day</p>
+                        <p class="mt-1 text-lg font-semibold text-white">
+                          {formatEmojiCheckInDate(emojiCheckInState.session.sessionDate, {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                          })}
                         </p>
-                        <h3 class="mt-3 text-xl font-semibold text-white">{template.name}</h3>
-                        <p class="mt-3 flex-1 text-sm leading-6 text-blue-100/65">{template.prompt}</p>
-                        <a
-                          href={gameHref(activeTeamId, template.slug)}
-                          class="mt-5 inline-flex justify-center rounded-2xl bg-cyan-400/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
-                        >
-                          Open game
-                        </a>
-                      </article>
-                    ))}
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div class="mt-5 rounded-3xl border border-white/10 bg-white/6 p-4 text-sm leading-6 text-blue-100/65">
-                    No game templates are available yet.
+
+                  {emojiCheckInFlash && (
+                    <div
+                      class:list={[
+                        "mt-5 rounded-3xl border p-4 text-sm leading-6",
+                        emojiCheckInFlash.type === "emoji-check-in-submit-error" ||
+                        emojiCheckInFlash.type === "emoji-check-in-reveal-error"
+                          ? "border-red-500/30 bg-red-900/40 text-red-200"
+                          : "border-emerald-300/25 bg-emerald-300/10 text-emerald-100",
+                      ]}
+                    >
+                      {emojiCheckInFlash.message}
+                    </div>
+                  )}
+
+                  {emojiCheckInState ? (
+                    <div class="mt-6 space-y-6">
+                      {emojiCheckInState.revealedSummary ? (
+                        <EmojiCheckInReveal
+                          client:load
+                          emojiCounts={emojiCheckInState.revealedSummary.emojiCounts}
+                          submittedCount={emojiCheckInState.revealedSummary.submittedCount}
+                          triggerBurst={shouldTriggerEmojiCheckInBurst}
+                        />
+                      ) : emojiCheckInState.hasCurrentMemberSubmitted ? (
+                        <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+                          <div>
+                            <p class="text-xs font-semibold tracking-[0.2em] text-emerald-100/75 uppercase">
+                              Checked in
+                            </p>
+                            <h4 class="mt-2 text-3xl font-semibold text-white">Your signal is in for today</h4>
+                            <p class="mt-3 max-w-2xl text-sm leading-6 text-blue-100/70">
+                              The dashboard keeps names out of sight until reveal time. What everyone can see right now
+                              is anonymous momentum only.
+                            </p>
+                            {emojiCheckInState.currentMemberSubmission && (
+                              <div class="mt-5 flex flex-wrap gap-3">
+                                {emojiCheckInState.currentMemberSubmission.emojis.map((emoji) => (
+                                  <span class="inline-flex items-center rounded-full border border-amber-200/35 bg-amber-200/12 px-4 py-2 text-2xl">
+                                    {emoji}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div class="rounded-[2rem] border border-white/10 bg-white/6 p-5">
+                            <p class="text-xs font-semibold tracking-[0.18em] text-blue-100/50 uppercase">
+                              Anonymous progress
+                            </p>
+                            <p class="mt-2 text-5xl font-semibold text-white">{emojiCheckInState.submittedCount}</p>
+                            <p class="mt-2 text-sm text-blue-100/60">
+                              teammate{emojiCheckInState.submittedCount === 1 ? "" : "s"} checked in
+                            </p>
+                            <form method="POST" action="/api/games/emoji-check-in/reveal" class="mt-5">
+                              <input type="hidden" name="teamId" value={activeTeamId} />
+                              <input type="hidden" name="sessionId" value={emojiCheckInState.session.id} />
+                              <button
+                                type="submit"
+                                class="w-full rounded-2xl bg-emerald-300/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200"
+                              >
+                                Reveal team mood
+                              </button>
+                            </form>
+                          </div>
+                        </div>
+                      ) : (
+                        <div class="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+                          <div>
+                            <p class="text-xs font-semibold tracking-[0.2em] text-cyan-100/65 uppercase">
+                              Submit your mood
+                            </p>
+                            <h4 class="mt-2 text-3xl font-semibold text-white">Pick the emojis that fit today</h4>
+                            <p class="mt-3 max-w-2xl text-sm leading-6 text-blue-100/70">
+                              One check-in per teammate, one shared reveal for the whole group.
+                            </p>
+
+                            <div class="mt-6">
+                              <EmojiCheckInPicker
+                                client:load
+                                teamId={activeTeamId}
+                                sessionId={emojiCheckInState.session.id}
+                                action="/api/games/emoji-check-in/submit"
+                                options={EMOJI_CHECK_IN_OPTIONS}
+                                initialSelected={emojiCheckInPickerInitialEmojis}
+                              />
+                            </div>
+                          </div>
+
+                          <aside class="rounded-[2rem] border border-white/10 bg-white/6 p-5">
+                            <p class="text-xs font-semibold tracking-[0.18em] text-blue-100/50 uppercase">
+                              Anonymous progress
+                            </p>
+                            <p class="mt-2 text-5xl font-semibold text-white">{emojiCheckInState.submittedCount}</p>
+                            <p class="mt-2 text-sm leading-6 text-blue-100/60">
+                              Only the total count is visible before reveal.
+                            </p>
+                          </aside>
+                        </div>
+                      )}
+
+                      <div class="rounded-[2rem] border border-white/10 bg-slate-950/25 p-5">
+                        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                          <div>
+                            <p class="text-xs font-semibold tracking-[0.2em] text-cyan-100/65 uppercase">
+                              30-day mood line
+                            </p>
+                            <h4 class="mt-2 text-2xl font-semibold text-white">Recent team patterns</h4>
+                            <p class="mt-3 text-sm leading-6 text-blue-100/65">
+                              Revealed days only. Legacy generic rounds stay out of this view so the daily pattern
+                              remains comparable.
+                            </p>
+                          </div>
+                          <div class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-blue-100/60">
+                            {emojiCheckInTimeline.length} revealed day{emojiCheckInTimeline.length === 1 ? "" : "s"}
+                          </div>
+                        </div>
+
+                        {emojiCheckInTimeline.length > 0 ? (
+                          <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                            {emojiCheckInTimeline.map((entry) => (
+                              <article
+                                class:list={[
+                                  "rounded-3xl border bg-white/6 p-4",
+                                  entry.session.id === emojiCheckInState.session.id
+                                    ? "border-amber-200/25 shadow-lg shadow-amber-500/10"
+                                    : "border-white/10",
+                                ]}
+                              >
+                                <div class="flex items-start justify-between gap-4">
+                                  <div>
+                                    <p class="text-xs font-semibold tracking-[0.18em] text-cyan-100/60 uppercase">
+                                      {formatEmojiCheckInDate(entry.session.sessionDate, {
+                                        weekday: "short",
+                                        month: "short",
+                                        day: "numeric",
+                                      })}
+                                    </p>
+                                    <p class="mt-2 text-sm text-blue-100/60">
+                                      {entry.submittedCount} teammate{entry.submittedCount === 1 ? "" : "s"} checked in
+                                    </p>
+                                  </div>
+                                  {entry.session.id === emojiCheckInState.session.id && (
+                                    <span class="rounded-full border border-amber-200/30 bg-amber-100/10 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-amber-100 uppercase">
+                                      Today
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div class="mt-4 flex flex-wrap gap-2">
+                                  {entry.emojiCounts.map((count) => (
+                                    <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/35 px-3 py-2 text-sm text-white">
+                                      <span class="text-xl">{count.emoji}</span>
+                                      <span class="text-blue-100/70">×{count.count}</span>
+                                    </span>
+                                  ))}
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                        ) : (
+                          <div class="mt-6 rounded-3xl border border-white/10 bg-white/6 p-4 text-sm leading-6 text-blue-100/65">
+                            The timeline starts after the first revealed Emoji Check-In day.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div class="mt-6 rounded-3xl border border-white/10 bg-white/6 p-4 text-sm leading-6 text-blue-100/65">
+                      Today's Emoji Check-In is unavailable right now.
+                    </div>
+                  )}
+                </section>
+
+                <section class="mt-6 rounded-[2rem] border border-white/10 bg-white/6 p-6">
+                  <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div class="max-w-2xl">
+                      <p class="text-xs font-semibold tracking-[0.2em] text-cyan-100/60 uppercase">Linked games</p>
+                      <h3 class="mt-2 text-2xl font-semibold text-white">Other ways to play with the team</h3>
+                      <p class="mt-3 text-sm leading-6 text-blue-100/65">
+                        These games keep their current page-based flow. Open one when your team wants a deeper prompt
+                        beyond the daily check-in.
+                      </p>
+                    </div>
                   </div>
-                )}
+
+                  {linkedGameTemplates.length > 0 ? (
+                    <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {linkedGameTemplates.map((template) => (
+                        <article class="flex min-h-56 flex-col rounded-3xl border border-white/10 bg-slate-950/25 p-5">
+                          <p class="text-xs font-semibold tracking-[0.2em] text-cyan-100/60 uppercase">
+                            {template.isHistoryEnabled ? "History-ready" : "Live only"}
+                          </p>
+                          <h4 class="mt-3 text-xl font-semibold text-white">{template.name}</h4>
+                          <p class="mt-3 flex-1 text-sm leading-6 text-blue-100/65">{template.prompt}</p>
+                          <a
+                            href={gameHref(activeTeamId, template.slug)}
+                            class="mt-5 inline-flex justify-center rounded-2xl bg-cyan-400/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                          >
+                            Open linked game
+                          </a>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <div class="mt-6 rounded-3xl border border-white/10 bg-slate-950/25 p-4 text-sm leading-6 text-blue-100/65">
+                      No linked games are available yet.
+                    </div>
+                  )}
+                </section>
               </section>
 
               <section

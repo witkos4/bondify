@@ -1,16 +1,17 @@
 ---
-import type { BondifyShellContext } from "@/types";
+import type { BondifyShellContext, TeamSurface } from "@/types";
 
 interface Props {
   shell?: BondifyShellContext | null;
+  surface?: TeamSurface;
 }
 
 const { user } = Astro.locals;
-const { shell = null }: Props = Astro.props;
+const { shell = null, surface = "dashboard" }: Props = Astro.props;
 const activeTeam = shell?.activeTeam ?? null;
 const hasMultipleTeams = (shell?.teams.length ?? 0) > 1;
 const dashboardHref = activeTeam ? `/dashboard?team=${encodeURIComponent(activeTeam.id)}` : "/dashboard";
-const managementHref = `${dashboardHref}#management`;
+const managementHref = activeTeam ? `/teams/${encodeURIComponent(activeTeam.id)}/manage` : null;
 ---
 
 <div
@@ -38,7 +39,11 @@ const managementHref = `${dashboardHref}#management`;
                 id="topbar-team-switcher"
                 name="team"
                 class="w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-sm text-white transition outline-none focus:border-cyan-300/70 sm:min-w-56"
-                onchange="this.form?.requestSubmit()"
+                onchange={
+                  surface === "management"
+                    ? "const value=this.value; if(value){ window.location.href='/teams/' + encodeURIComponent(value) + '/manage'; }"
+                    : "this.form?.requestSubmit()"
+                }
               >
                 {shell.teams.map((team) => (
                   <option value={team.id} selected={team.id === activeTeam?.id} class="bg-slate-950 text-white">
@@ -53,9 +58,11 @@ const managementHref = `${dashboardHref}#management`;
             <a href={dashboardHref} class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
               Games
             </a>
-            <a href={managementHref} class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
-              Team management
-            </a>
+            {managementHref && (
+              <a href={managementHref} class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
+                Team management
+              </a>
+            )}
             <form method="POST" action="/api/auth/signout">
               <button type="submit" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
                 Sign out

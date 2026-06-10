@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { APIRoute } from "astro";
 import { createBondifyServices, BondifyServiceError } from "@/lib/services/bondify";
-import { setDashboardFlash } from "@/lib/dashboard-flash";
+import { getTeamSurfaceHref, parseTeamSurface, setDashboardFlash } from "@/lib/dashboard-flash";
 
 export const prerender = false;
 
@@ -16,6 +16,18 @@ function readStringField(form: FormData, key: string): string {
 
 export const POST: APIRoute = async (context) => {
   const form = await context.request.formData();
+  const returnSurface = parseTeamSurface(form.get("surface"));
+
+  if (returnSurface === null) {
+    setDashboardFlash(context.cookies, {
+      type: "team-create-error",
+      teamName: readStringField(form, "teamName").trim(),
+      message: "Choose a valid return surface before creating a team.",
+      surface: "dashboard",
+    });
+    return context.redirect("/dashboard");
+  }
+
   const parsed = createTeamSchema.safeParse({
     teamName: form.get("teamName"),
   });
@@ -26,8 +38,9 @@ export const POST: APIRoute = async (context) => {
       type: "team-create-error",
       teamName: submittedTeamName,
       message: parsed.error.issues[0]?.message ?? "Team name is required.",
+      surface: returnSurface,
     });
-    return context.redirect("/dashboard#create-team-next");
+    return context.redirect(getTeamSurfaceHref({ surface: returnSurface, hash: "create-team-next" }));
   }
 
   const services = createBondifyServices({
@@ -42,8 +55,9 @@ export const POST: APIRoute = async (context) => {
       teamId: summary.team.id,
       teamName: summary.team.name,
       message: `${summary.team.name} is ready. You can invite teammates below.`,
+      surface: returnSurface,
     });
-    return context.redirect(`/dashboard?team=${summary.team.id}`);
+    return context.redirect(getTeamSurfaceHref({ surface: returnSurface, teamId: summary.team.id }));
   } catch (error) {
     const message = error instanceof BondifyServiceError ? error.message : "We couldn't create the team right now.";
 
@@ -51,7 +65,8 @@ export const POST: APIRoute = async (context) => {
       type: "team-create-error",
       teamName: parsed.data.teamName,
       message,
+      surface: returnSurface,
     });
-    return context.redirect("/dashboard#create-team-next");
+    return context.redirect(getTeamSurfaceHref({ surface: returnSurface, hash: "create-team-next" }));
   }
 };

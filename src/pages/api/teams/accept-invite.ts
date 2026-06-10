@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { APIRoute } from "astro";
 import { createBondifyServices, BondifyServiceError } from "@/lib/services/bondify";
-import { setDashboardFlash } from "@/lib/dashboard-flash";
+import { getTeamSurfaceHref, parseTeamSurface, setDashboardFlash } from "@/lib/dashboard-flash";
 
 export const prerender = false;
 
@@ -16,6 +16,18 @@ function readStringField(form: FormData, key: string): string {
 
 export const POST: APIRoute = async (context) => {
   const form = await context.request.formData();
+  const returnSurface = parseTeamSurface(form.get("surface"));
+
+  if (returnSurface === null) {
+    setDashboardFlash(context.cookies, {
+      type: "invite-accept-error",
+      inviteId: readStringField(form, "inviteId"),
+      message: "Choose a valid return surface before accepting an invite.",
+      surface: "dashboard",
+    });
+    return context.redirect("/dashboard");
+  }
+
   const parsed = acceptInviteSchema.safeParse({
     inviteId: form.get("inviteId"),
   });
@@ -27,8 +39,9 @@ export const POST: APIRoute = async (context) => {
       type: "invite-accept-error",
       inviteId: fallbackInviteId,
       message: parsed.error.issues[0]?.message ?? "Choose a valid invite before accepting.",
+      surface: returnSurface,
     });
-    return context.redirect("/dashboard");
+    return context.redirect(getTeamSurfaceHref({ surface: returnSurface }));
   }
 
   const services = createBondifyServices({
@@ -42,8 +55,9 @@ export const POST: APIRoute = async (context) => {
       type: "invite-accepted",
       teamId: result.membership.teamId,
       message: `You're in. The invited team is now available from your dashboard.`,
+      surface: returnSurface,
     });
-    return context.redirect(`/dashboard?team=${result.membership.teamId}`);
+    return context.redirect(getTeamSurfaceHref({ surface: returnSurface, teamId: result.membership.teamId }));
   } catch (error) {
     const message = error instanceof BondifyServiceError ? error.message : "We couldn't accept this invite right now.";
 
@@ -51,7 +65,8 @@ export const POST: APIRoute = async (context) => {
       type: "invite-accept-error",
       inviteId: parsed.data.inviteId,
       message,
+      surface: returnSurface,
     });
-    return context.redirect("/dashboard");
+    return context.redirect(getTeamSurfaceHref({ surface: returnSurface }));
   }
 };

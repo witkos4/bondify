@@ -6,6 +6,10 @@ import type {
   BondifyDomainErrorCode,
   BondifyGameResponseRecord,
   BondifyGameRound,
+  EmojiCheckInRevealSummary,
+  EmojiCheckInSession,
+  EmojiCheckInTimelineEntry,
+  EmojiCheckInTodayState,
   BondifyShellContext,
   BondifyShellTeamOption,
   BondifyGameTemplate,
@@ -21,11 +25,30 @@ import type {
   TeamHistoryClearResult,
   TeamHistoryEntryClearResult,
   TeamHistoryState,
+  TeamManagementState,
   TeamInviteCreateResult,
   TeamInviteView,
   TeamRosterEntry,
   TeamSummary,
+  TwoTruthsEntryRecord,
+  TwoTruthsGuessProgress,
+  TwoTruthsGuessRecord,
+  TwoTruthsHistorySummary,
+  TwoTruthsLieIndex,
+  TwoTruthsRevealScore,
+  TwoTruthsRevealSummary,
+  TwoTruthsRoundPhase,
+  TwoTruthsRoundRecord,
+  TwoTruthsRoundState,
 } from "@/types";
+import {
+  EMOJI_CHECK_IN_DEFAULT_TIME_ZONE,
+  MAX_EMOJI_CHECK_IN_EMOJIS,
+  MIN_EMOJI_CHECK_IN_EMOJIS,
+  getEmojiCheckInSessionDateKey,
+  normalizeEmojiCheckInSelection,
+  summarizeEmojiCheckInSelections,
+} from "@/lib/emoji-check-in";
 
 type SupabaseServerClient = NonNullable<ReturnType<typeof createClient>>;
 
@@ -110,6 +133,59 @@ interface GameResponseRow {
   created_at: string;
 }
 
+interface TwoTruthsRoundRow {
+  game_round_id: string;
+  phase: TwoTruthsRoundPhase;
+  collection_closed_at: string | null;
+  voting_started_at: string | null;
+  voting_closed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface TwoTruthsEntryRow {
+  id: string;
+  game_round_id: string;
+  author_membership_id: string;
+  author_profile_id: string;
+  statement_one: string;
+  statement_two: string;
+  statement_three: string;
+  lie_statement_index: TwoTruthsLieIndex;
+  included_in_voting: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface TwoTruthsGuessRow {
+  id: string;
+  game_round_id: string;
+  voter_membership_id: string;
+  voter_profile_id: string;
+  target_entry_id: string;
+  guessed_lie_index: TwoTruthsLieIndex;
+  created_at: string;
+}
+
+interface EmojiCheckInSessionRow {
+  id: string;
+  team_id: string;
+  session_date: string;
+  status: EmojiCheckInSession["status"];
+  revealed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface EmojiCheckInSubmissionRow {
+  id: string;
+  session_id: string;
+  membership_id: string;
+  profile_id: string;
+  emojis: string[];
+  created_at: string;
+}
+
 interface TeamMembershipWithProfileRow extends TeamMembershipRow {
   profile: Pick<ProfileRow, "id" | "email" | "normalized_email">;
 }
@@ -137,6 +213,18 @@ interface HistoryEntryRow extends GameRoundRow {
   game_responses: GameResponseRow[];
 }
 
+interface TwoTruthsEntryWithAuthorRow extends TwoTruthsEntryRow {
+  author_profile: Pick<ProfileRow, "id" | "email" | "normalized_email">;
+}
+
+interface TwoTruthsGuessWithVoterRow extends TwoTruthsGuessRow {
+  voter_profile: Pick<ProfileRow, "id" | "email" | "normalized_email">;
+}
+
+interface EmojiCheckInSessionWithSubmissionsRow extends EmojiCheckInSessionRow {
+  emoji_check_in_submissions: EmojiCheckInSubmissionRow[];
+}
+
 interface SupabaseLikeError {
   code?: string;
   message?: string;
@@ -148,7 +236,10 @@ interface HistoryClearRpcResult {
 }
 
 const MAX_RESPONSE_TEXT_LENGTH = 500;
+const MAX_TWO_TRUTHS_STATEMENT_LENGTH = 200;
 const HISTORY_RETENTION_DAYS = 30;
+const EMOJI_CHECK_IN_TIMELINE_DAYS = 30;
+const TWO_TRUTHS_TEMPLATE_SLUG = "two-truths-and-a-lie";
 
 export class BondifyServiceError extends Error {
   readonly code: BondifyDomainErrorCode;
@@ -284,6 +375,116 @@ function toResponseRecord(row: GameResponseRow): BondifyGameResponseRecord {
   };
 }
 
+function toTwoTruthsRoundRecord(row: TwoTruthsRoundRow): TwoTruthsRoundRecord {
+  return {
+    roundId: row.game_round_id,
+    phase: row.phase,
+    collectionClosedAt: row.collection_closed_at,
+    votingStartedAt: row.voting_started_at,
+    votingClosedAt: row.voting_closed_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function toTwoTruthsEntryAuthor(profile: Pick<ProfileRow, "id" | "email" | "normalized_email">, membershipId: string) {
+  return {
+    membershipId,
+    profileId: profile.id,
+    email: profile.email,
+    normalizedEmail: profile.normalized_email,
+  };
+}
+
+function toTwoTruthsEntryRecord(row: TwoTruthsEntryWithAuthorRow): TwoTruthsEntryRecord {
+  return {
+    id: row.id,
+    roundId: row.game_round_id,
+    author: toTwoTruthsEntryAuthor(row.author_profile, row.author_membership_id),
+    statements: [row.statement_one, row.statement_two, row.statement_three],
+    lieStatementIndex: row.lie_statement_index,
+    includedInVoting: row.included_in_voting,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function toTwoTruthsGuessRecord(row: TwoTruthsGuessWithVoterRow): TwoTruthsGuessRecord {
+  return {
+    id: row.id,
+    roundId: row.game_round_id,
+    voter: toTwoTruthsEntryAuthor(row.voter_profile, row.voter_membership_id),
+    targetEntryId: row.target_entry_id,
+    guessedLieIndex: row.guessed_lie_index,
+    createdAt: row.created_at,
+  };
+}
+
+function toEmojiCheckInSession(row: EmojiCheckInSessionRow): EmojiCheckInSession {
+  return {
+    id: row.id,
+    teamId: row.team_id,
+    sessionDate: row.session_date,
+    status: row.status,
+    revealedAt: row.revealed_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function toEmojiCheckInRevealSummary(input: {
+  session: EmojiCheckInSessionRow;
+  submissions: EmojiCheckInSubmissionRow[];
+}): EmojiCheckInRevealSummary {
+  return {
+    session: toEmojiCheckInSession(input.session),
+    submittedCount: input.submissions.length,
+    emojiCounts: summarizeEmojiCheckInSelections(input.submissions.flatMap((submission) => submission.emojis)),
+  };
+}
+
+function toEmojiCheckInTimelineEntry(input: {
+  session: EmojiCheckInSessionRow;
+  submissions: EmojiCheckInSubmissionRow[];
+}): EmojiCheckInTimelineEntry {
+  return {
+    session: toEmojiCheckInSession(input.session),
+    submittedCount: input.submissions.length,
+    emojiCounts: summarizeEmojiCheckInSelections(input.submissions.flatMap((submission) => submission.emojis)),
+  };
+}
+
+function toEmojiCheckInTodayState(input: {
+  teamId: string;
+  session: EmojiCheckInSessionRow;
+  membership: TeamMembershipRow;
+  submissions: EmojiCheckInSubmissionRow[];
+}): EmojiCheckInTodayState {
+  const currentMemberSubmission =
+    input.submissions.find((submission) => submission.membership_id === input.membership.id) ?? null;
+  const revealedSummary =
+    input.session.status === "revealed" && input.submissions.length > 0
+      ? toEmojiCheckInRevealSummary({
+          session: input.session,
+          submissions: input.submissions,
+        })
+      : null;
+
+  return {
+    teamId: input.teamId,
+    session: toEmojiCheckInSession(input.session),
+    hasCurrentMemberSubmitted: currentMemberSubmission !== null,
+    currentMemberSubmission: currentMemberSubmission
+      ? {
+          id: currentMemberSubmission.id,
+          emojis: currentMemberSubmission.emojis,
+        }
+      : null,
+    submittedCount: input.submissions.length,
+    revealedSummary,
+  };
+}
+
 function toParticipantSafeResponses(rows: GameResponseRow[]) {
   return rows.map((row) => ({
     id: row.id,
@@ -313,6 +514,20 @@ function toTeamHistoryState(input: {
   };
 }
 
+function toTeamManagementState(input: {
+  row: TeamSummaryRow;
+  incomingInvites: TeamInviteView[];
+  profileId: string;
+}): TeamManagementState {
+  return {
+    team: toTeam(input.row),
+    memberships: input.row.team_memberships.map(toTeamRosterEntry),
+    pendingInvites: input.row.team_invites.filter((invite) => invite.status === "pending").map(toTeamInviteView),
+    incomingInvites: input.incomingInvites,
+    canManageTeam: input.row.created_by === input.profileId,
+  };
+}
+
 function normalizeHistoryClearRpcResult(
   row: HistoryClearRpcResult | null,
   fallbackClearedAt: string,
@@ -329,6 +544,7 @@ function toTeamGameState(input: {
   template: TemplateProjectionRow;
   activeRound: ActiveGameRoundRow | null;
   revealedRound: GameRoundWithTemplateRow | null;
+  twoTruthsRound: TwoTruthsRoundState | null;
 }): TeamGameState {
   const activeRound = input.activeRound;
   const currentMemberResponse =
@@ -347,6 +563,7 @@ function toTeamGameState(input: {
         }
       : null,
     revealedRound: input.revealedRound ? toParticipantSafeRoundReveal(input.revealedRound) : null,
+    twoTruthsRound: input.twoTruthsRound,
   };
 }
 
@@ -582,12 +799,22 @@ async function listVisibleHistoryRows(supabase: SupabaseServerClient, teamId: st
   return data as HistoryEntryRow[];
 }
 
-function toParticipantSafeHistoryEntries(rows: HistoryEntryRow[]): ParticipantSafeHistoryEntry[] {
-  return rows.map((row) => ({
-    round: toRound(row),
-    template: toTemplateProjection(row.game_template),
-    responses: toParticipantSafeResponses(row.game_responses),
-  }));
+async function toParticipantSafeHistoryEntries(
+  supabase: SupabaseServerClient,
+  rows: HistoryEntryRow[],
+): Promise<ParticipantSafeHistoryEntry[]> {
+  const entries = await Promise.all(
+    rows.map(async (row) => ({
+      round: toRound(row),
+      template: toTemplateProjection(row.game_template),
+      responses: isTwoTruthsTemplateSlug(row.game_template.slug) ? [] : toParticipantSafeResponses(row.game_responses),
+      twoTruthsSummary: isTwoTruthsTemplateSlug(row.game_template.slug)
+        ? await buildTwoTruthsHistorySummary(supabase, row)
+        : null,
+    })),
+  );
+
+  return entries;
 }
 
 function toTeamRosterEntry(row: TeamMembershipWithProfileRow): TeamRosterEntry {
@@ -670,6 +897,44 @@ async function listTeamSummaryRows(supabase: SupabaseServerClient): Promise<Team
   }
 
   return data as TeamSummaryRow[];
+}
+
+async function listPendingInvitesForNormalizedEmail(
+  supabase: SupabaseServerClient,
+  normalizedEmail: string,
+): Promise<TeamInviteView[]> {
+  const { data, error } = await supabase
+    .from("team_invites")
+    .select(
+      `
+        id,
+        team_id,
+        inviter_profile_id,
+        email,
+        normalized_email,
+        status,
+        accepted_profile_id,
+        accepted_at,
+        created_at,
+        updated_at,
+        accepted_profile:profiles!team_invites_accepted_profile_id_fkey (
+          id,
+          email,
+          normalized_email
+        )
+      `,
+    )
+    .eq("normalized_email", normalizedEmail)
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new BondifyServiceError("INVITE_NOT_FOUND", error.message, {
+      normalizedEmail,
+    });
+  }
+
+  return (data as TeamInviteWithAcceptedProfileRow[]).map(toTeamInviteView);
 }
 
 async function getTemplateBySlug(supabase: SupabaseServerClient, gameSlug: string): Promise<TemplateProjectionRow> {
@@ -783,6 +1048,538 @@ async function getLatestRevealedGameRound(
   return data;
 }
 
+async function getEmojiCheckInSessionByTeamAndDate(
+  supabase: SupabaseServerClient,
+  input: { teamId: string; sessionDate: string },
+): Promise<EmojiCheckInSessionRow | null> {
+  const { data, error } = await supabase
+    .from("emoji_check_in_sessions")
+    .select("id, team_id, session_date, status, revealed_at, created_at, updated_at")
+    .eq("team_id", input.teamId)
+    .eq("session_date", input.sessionDate)
+    .maybeSingle();
+
+  if (error) {
+    throw new BondifyServiceError("EMOJI_CHECK_IN_SESSION_NOT_FOUND", error.message, input);
+  }
+
+  return data;
+}
+
+async function getEmojiCheckInSessionWithSubmissions(
+  supabase: SupabaseServerClient,
+  input: { teamId: string; sessionId: string },
+): Promise<EmojiCheckInSessionWithSubmissionsRow | null> {
+  const { data, error } = await supabase
+    .from("emoji_check_in_sessions")
+    .select(
+      `
+        id,
+        team_id,
+        session_date,
+        status,
+        revealed_at,
+        created_at,
+        updated_at,
+        emoji_check_in_submissions (
+          id,
+          session_id,
+          membership_id,
+          profile_id,
+          emojis,
+          created_at
+        )
+      `,
+    )
+    .eq("id", input.sessionId)
+    .eq("team_id", input.teamId)
+    .maybeSingle();
+
+  if (error) {
+    throw new BondifyServiceError("EMOJI_CHECK_IN_SESSION_NOT_FOUND", error.message, input);
+  }
+
+  return data;
+}
+
+function validateEmojiCheckInEmojis(emojis: string[]): string[] {
+  try {
+    return normalizeEmojiCheckInSelection(emojis);
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : `Choose between ${MIN_EMOJI_CHECK_IN_EMOJIS} and ${MAX_EMOJI_CHECK_IN_EMOJIS} valid emojis.`;
+
+    throw new BondifyServiceError("INVALID_EMOJI_SELECTION", message, {
+      minSelections: MIN_EMOJI_CHECK_IN_EMOJIS,
+      maxSelections: MAX_EMOJI_CHECK_IN_EMOJIS,
+    });
+  }
+}
+
+async function ensureTodayEmojiCheckInSession(
+  supabase: SupabaseServerClient,
+  input: { teamId: string; profileId: string },
+): Promise<{ membership: TeamMembershipRow; session: EmojiCheckInSessionRow }> {
+  const membership = await requireMembershipAccess(supabase, input.teamId, input.profileId);
+  const sessionDate = getEmojiCheckInSessionDateKey(new Date(), EMOJI_CHECK_IN_DEFAULT_TIME_ZONE);
+  const existingSession = await getEmojiCheckInSessionByTeamAndDate(supabase, {
+    teamId: input.teamId,
+    sessionDate,
+  });
+
+  if (existingSession) {
+    return {
+      membership,
+      session: existingSession,
+    };
+  }
+
+  const { data: createdSession, error: createSessionError } = await supabase
+    .from("emoji_check_in_sessions")
+    .insert({
+      team_id: input.teamId,
+      session_date: sessionDate,
+    })
+    .select("id, team_id, session_date, status, revealed_at, created_at, updated_at")
+    .maybeSingle();
+
+  if (createSessionError) {
+    if (createSessionError.code === "23505") {
+      const retrySession = await getEmojiCheckInSessionByTeamAndDate(supabase, {
+        teamId: input.teamId,
+        sessionDate,
+      });
+
+      if (retrySession) {
+        return {
+          membership,
+          session: retrySession,
+        };
+      }
+    }
+
+    throw new BondifyServiceError("EMOJI_CHECK_IN_SESSION_NOT_FOUND", createSessionError.message, {
+      teamId: input.teamId,
+      sessionDate,
+    });
+  }
+
+  if (!createdSession) {
+    const retrySession = await getEmojiCheckInSessionByTeamAndDate(supabase, {
+      teamId: input.teamId,
+      sessionDate,
+    });
+
+    if (retrySession) {
+      return {
+        membership,
+        session: retrySession,
+      };
+    }
+
+    throw new BondifyServiceError(
+      "EMOJI_CHECK_IN_SESSION_NOT_FOUND",
+      "We couldn't load today's Emoji Check-In session.",
+      {
+        teamId: input.teamId,
+        sessionDate,
+      },
+    );
+  }
+
+  return {
+    membership,
+    session: createdSession,
+  };
+}
+
+async function loadTodayEmojiCheckInState(
+  supabase: SupabaseServerClient,
+  input: { teamId: string; profileId: string },
+): Promise<EmojiCheckInTodayState> {
+  const { membership, session } = await ensureTodayEmojiCheckInSession(supabase, input);
+  const sessionWithSubmissions = await getEmojiCheckInSessionWithSubmissions(supabase, {
+    teamId: input.teamId,
+    sessionId: session.id,
+  });
+
+  if (!sessionWithSubmissions) {
+    throw new BondifyServiceError(
+      "EMOJI_CHECK_IN_SESSION_NOT_FOUND",
+      "We couldn't load today's Emoji Check-In session.",
+      {
+        teamId: input.teamId,
+        sessionId: session.id,
+      },
+    );
+  }
+
+  return toEmojiCheckInTodayState({
+    teamId: input.teamId,
+    session: sessionWithSubmissions,
+    membership,
+    submissions: sessionWithSubmissions.emoji_check_in_submissions,
+  });
+}
+
+async function listEmojiCheckInTimelineRows(
+  supabase: SupabaseServerClient,
+  input: { teamId: string; days: number },
+): Promise<EmojiCheckInSessionWithSubmissionsRow[]> {
+  const { data, error } = await supabase
+    .from("emoji_check_in_sessions")
+    .select(
+      `
+        id,
+        team_id,
+        session_date,
+        status,
+        revealed_at,
+        created_at,
+        updated_at,
+        emoji_check_in_submissions (
+          id,
+          session_id,
+          membership_id,
+          profile_id,
+          emojis,
+          created_at
+        )
+      `,
+    )
+    .eq("team_id", input.teamId)
+    .eq("status", "revealed")
+    .order("session_date", { ascending: false })
+    .limit(input.days);
+
+  if (error) {
+    throw new BondifyServiceError("EMOJI_CHECK_IN_SESSION_NOT_FOUND", error.message, input);
+  }
+
+  return (data as EmojiCheckInSessionWithSubmissionsRow[]).filter((row) => row.emoji_check_in_submissions.length > 0);
+}
+
+function isTwoTruthsTemplateSlug(gameSlug: string): boolean {
+  return gameSlug === TWO_TRUTHS_TEMPLATE_SLUG;
+}
+
+function validateTwoTruthsStatement(statement: string, position: number): string {
+  const trimmedStatement = statement.trim();
+
+  if (!trimmedStatement) {
+    throw new BondifyServiceError("INVALID_TWO_TRUTHS_STATEMENT", `Statement ${position} cannot be blank.`, {
+      position,
+    });
+  }
+
+  if (trimmedStatement.length > MAX_TWO_TRUTHS_STATEMENT_LENGTH) {
+    throw new BondifyServiceError(
+      "INVALID_TWO_TRUTHS_STATEMENT",
+      `Statement ${position} must be ${MAX_TWO_TRUTHS_STATEMENT_LENGTH} characters or fewer.`,
+      { position, maxLength: MAX_TWO_TRUTHS_STATEMENT_LENGTH },
+    );
+  }
+
+  return trimmedStatement;
+}
+
+function validateTwoTruthsLieIndex(lieStatementIndex: number): TwoTruthsLieIndex {
+  if (lieStatementIndex !== 1 && lieStatementIndex !== 2 && lieStatementIndex !== 3) {
+    throw new BondifyServiceError("INVALID_TWO_TRUTHS_LIE_INDEX", "Choose which of the three statements is the lie.", {
+      lieStatementIndex,
+    });
+  }
+
+  return lieStatementIndex;
+}
+
+async function ensureTwoTruthsRoundRow(
+  supabase: SupabaseServerClient,
+  gameRoundId: string,
+): Promise<TwoTruthsRoundRow> {
+  const { data: existingRow, error: existingRowError } = await supabase
+    .from("two_truths_rounds")
+    .select("game_round_id, phase, collection_closed_at, voting_started_at, voting_closed_at, created_at, updated_at")
+    .eq("game_round_id", gameRoundId)
+    .maybeSingle();
+
+  if (existingRowError) {
+    throw new BondifyServiceError("ROUND_NOT_FOUND", existingRowError.message, { gameRoundId });
+  }
+
+  if (existingRow) {
+    return existingRow;
+  }
+
+  const { data: createdRow, error: createError } = await supabase
+    .from("two_truths_rounds")
+    .insert({
+      game_round_id: gameRoundId,
+      phase: "collecting",
+    })
+    .select("game_round_id, phase, collection_closed_at, voting_started_at, voting_closed_at, created_at, updated_at")
+    .maybeSingle();
+
+  if (createError) {
+    if (createError.code === "23505") {
+      const { data: retryRow, error: retryError } = await supabase
+        .from("two_truths_rounds")
+        .select(
+          "game_round_id, phase, collection_closed_at, voting_started_at, voting_closed_at, created_at, updated_at",
+        )
+        .eq("game_round_id", gameRoundId)
+        .single();
+
+      if (retryError) {
+        throw new BondifyServiceError("ROUND_NOT_FOUND", retryError.message, { gameRoundId });
+      }
+
+      return retryRow;
+    }
+
+    throw new BondifyServiceError("ROUND_NOT_FOUND", createError.message, { gameRoundId });
+  }
+
+  if (!createdRow) {
+    throw new BondifyServiceError("ROUND_NOT_FOUND", "Structured round state could not be created.", { gameRoundId });
+  }
+
+  return createdRow;
+}
+
+async function listTwoTruthsEntries(
+  supabase: SupabaseServerClient,
+  gameRoundId: string,
+): Promise<TwoTruthsEntryWithAuthorRow[]> {
+  const { data, error } = await supabase
+    .from("two_truths_entries")
+    .select(
+      `
+        id,
+        game_round_id,
+        author_membership_id,
+        author_profile_id,
+        statement_one,
+        statement_two,
+        statement_three,
+        lie_statement_index,
+        included_in_voting,
+        created_at,
+        updated_at,
+        author_profile:profiles!two_truths_entries_author_profile_id_fkey (
+          id,
+          email,
+          normalized_email
+        )
+      `,
+    )
+    .eq("game_round_id", gameRoundId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new BondifyServiceError("ROUND_NOT_FOUND", error.message, { gameRoundId });
+  }
+
+  return data as TwoTruthsEntryWithAuthorRow[];
+}
+
+async function listTwoTruthsGuesses(
+  supabase: SupabaseServerClient,
+  gameRoundId: string,
+): Promise<TwoTruthsGuessWithVoterRow[]> {
+  const { data, error } = await supabase
+    .from("two_truths_guesses")
+    .select(
+      `
+        id,
+        game_round_id,
+        voter_membership_id,
+        voter_profile_id,
+        target_entry_id,
+        guessed_lie_index,
+        created_at,
+        voter_profile:profiles!two_truths_guesses_voter_profile_id_fkey (
+          id,
+          email,
+          normalized_email
+        )
+      `,
+    )
+    .eq("game_round_id", gameRoundId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new BondifyServiceError("ROUND_NOT_FOUND", error.message, { gameRoundId });
+  }
+
+  return data as TwoTruthsGuessWithVoterRow[];
+}
+
+function toTwoTruthsGuessProgress(input: {
+  entries: TwoTruthsEntryRecord[];
+  guesses: TwoTruthsGuessRecord[];
+  currentMembershipId: string;
+}): TwoTruthsGuessProgress {
+  const votingEntries = input.entries.filter((entry) => entry.includedInVoting);
+  const participantCount = votingEntries.length;
+  const requiredGuessesPerParticipant = participantCount > 1 ? participantCount - 1 : 0;
+  const requiredTotalGuessCount = participantCount * requiredGuessesPerParticipant;
+  const currentMemberSubmittedGuessCount = input.guesses.filter(
+    (guess) => guess.voter.membershipId === input.currentMembershipId,
+  ).length;
+
+  return {
+    participantCount,
+    requiredGuessesPerParticipant,
+    requiredTotalGuessCount,
+    submittedGuessCount: input.guesses.length,
+    currentMemberSubmittedGuessCount,
+    currentMemberOutstandingGuessCount: Math.max(requiredGuessesPerParticipant - currentMemberSubmittedGuessCount, 0),
+    allRequiredGuessesSubmitted: requiredTotalGuessCount > 0 && input.guesses.length >= requiredTotalGuessCount,
+  };
+}
+
+function buildTwoTruthsRevealSummary(input: {
+  entries: TwoTruthsEntryRecord[];
+  guesses: TwoTruthsGuessRecord[];
+}): TwoTruthsRevealSummary {
+  const entryById = new Map(input.entries.map((entry) => [entry.id, entry]));
+
+  const scores: TwoTruthsRevealScore[] = input.entries
+    .filter((entry) => entry.includedInVoting)
+    .map((entry) => {
+      const correctGuessCount = input.guesses.filter(
+        (guess) =>
+          guess.voter.membershipId === entry.author.membershipId &&
+          entryById.get(guess.targetEntryId)?.lieStatementIndex === guess.guessedLieIndex,
+      ).length;
+      const fooledTeammateCount = input.guesses.filter(
+        (guess) => guess.targetEntryId === entry.id && guess.guessedLieIndex !== entry.lieStatementIndex,
+      ).length;
+
+      return {
+        participant: entry.author,
+        correctGuessCount,
+        fooledTeammateCount,
+        totalScore: correctGuessCount + fooledTeammateCount,
+      };
+    })
+    .sort(
+      (left, right) =>
+        right.totalScore - left.totalScore || left.participant.email.localeCompare(right.participant.email),
+    );
+
+  return {
+    totalGuessesRecorded: input.guesses.length,
+    scores,
+  };
+}
+
+async function loadTwoTruthsRoundState(
+  supabase: SupabaseServerClient,
+  input: { round: GameRoundRow; membership: TeamMembershipRow },
+): Promise<TwoTruthsRoundState> {
+  const structuredRoundRow = await ensureTwoTruthsRoundRow(supabase, input.round.id);
+  const entryRows = await listTwoTruthsEntries(supabase, input.round.id);
+  const guessRows = await listTwoTruthsGuesses(supabase, input.round.id);
+  const entries = entryRows.map(toTwoTruthsEntryRecord);
+  const guesses = guessRows.map(toTwoTruthsGuessRecord);
+  const guessProgress = toTwoTruthsGuessProgress({
+    entries,
+    guesses,
+    currentMembershipId: input.membership.id,
+  });
+
+  return {
+    round: toRound(input.round),
+    structuredRound: toTwoTruthsRoundRecord(structuredRoundRow),
+    entries,
+    guesses,
+    hasCurrentMemberSubmitted: entries.some((entry) => entry.author.membershipId === input.membership.id),
+    currentMemberEntryId: entries.find((entry) => entry.author.membershipId === input.membership.id)?.id ?? null,
+    guessProgress,
+    revealSummary:
+      structuredRoundRow.phase === "revealed"
+        ? buildTwoTruthsRevealSummary({
+            entries,
+            guesses,
+          })
+        : null,
+  };
+}
+
+async function finalizeTwoTruthsVoting(
+  supabase: SupabaseServerClient,
+  input: { round: GameRoundRow; membership: TeamMembershipRow },
+): Promise<TwoTruthsRoundState> {
+  const now = new Date().toISOString();
+  const { error: roundStateError } = await supabase
+    .from("two_truths_rounds")
+    .update({
+      phase: "revealed",
+      voting_closed_at: now,
+    })
+    .eq("game_round_id", input.round.id)
+    .eq("phase", "voting");
+
+  if (roundStateError) {
+    throw new BondifyServiceError("TWO_TRUTHS_ROUND_PHASE_MISMATCH", roundStateError.message, {
+      roundId: input.round.id,
+    });
+  }
+
+  const { data: updatedRound, error: updatedRoundError } = await supabase
+    .from("game_rounds")
+    .update({
+      status: "revealed",
+      revealed_at: now,
+    })
+    .eq("id", input.round.id)
+    .eq("status", "open")
+    .select(
+      "id, team_id, game_template_id, opened_by_profile_id, status, revealed_at, history_visible_until, history_cleared_at, created_at, updated_at",
+    )
+    .single();
+
+  if (updatedRoundError) {
+    throw new BondifyServiceError("ROUND_NOT_OPEN", updatedRoundError.message, { roundId: input.round.id });
+  }
+
+  return loadTwoTruthsRoundState(supabase, {
+    round: updatedRound,
+    membership: input.membership,
+  });
+}
+
+async function buildTwoTruthsHistorySummary(
+  supabase: SupabaseServerClient,
+  round: GameRoundRow,
+): Promise<TwoTruthsHistorySummary> {
+  const { data: structuredRound, error: structuredRoundError } = await supabase
+    .from("two_truths_rounds")
+    .select("game_round_id, phase, collection_closed_at, voting_started_at, voting_closed_at, created_at, updated_at")
+    .eq("game_round_id", round.id)
+    .single();
+
+  if (structuredRoundError) {
+    throw new BondifyServiceError("HISTORY_NOT_VISIBLE", structuredRoundError.message, { roundId: round.id });
+  }
+
+  const entries = (await listTwoTruthsEntries(supabase, round.id)).map(toTwoTruthsEntryRecord);
+  const guesses = (await listTwoTruthsGuesses(supabase, round.id)).map(toTwoTruthsGuessRecord);
+
+  return {
+    round: toTwoTruthsRoundRecord(structuredRound),
+    entries,
+    revealSummary: buildTwoTruthsRevealSummary({
+      entries,
+      guesses,
+    }),
+  };
+}
+
 async function loadTeamGameState(
   supabase: SupabaseServerClient,
   input: { teamId: string; gameSlug: string; profileId: string },
@@ -793,19 +1590,28 @@ async function loadTeamGameState(
     teamId: input.teamId,
     gameTemplateId: template.id,
   });
-  const revealedRound = activeRound
+  const latestRevealedRound = activeRound
     ? null
     : await getLatestRevealedGameRound(supabase, {
         teamId: input.teamId,
         gameTemplateId: template.id,
       });
+  const structuredSourceRound = activeRound ?? latestRevealedRound;
+  const twoTruthsRound =
+    isTwoTruthsTemplateSlug(template.slug) && structuredSourceRound
+      ? await loadTwoTruthsRoundState(supabase, {
+          round: structuredSourceRound,
+          membership,
+        })
+      : null;
 
   return toTeamGameState({
     teamId: input.teamId,
     membership,
     template,
-    activeRound,
-    revealedRound,
+    activeRound: isTwoTruthsTemplateSlug(template.slug) ? null : activeRound,
+    revealedRound: isTwoTruthsTemplateSlug(template.slug) ? null : latestRevealedRound,
+    twoTruthsRound,
   });
 }
 
@@ -866,6 +1672,29 @@ export function createBondifyServices(context: ServiceContext) {
           teams,
           activeTeam,
         };
+      });
+    },
+
+    async getTeamManagementState(input: { teamId: string }): Promise<TeamManagementState> {
+      return withCurrentProfile(async (supabase, profile) => {
+        const [rows, incomingInvites] = await Promise.all([
+          listTeamSummaryRows(supabase),
+          listPendingInvitesForNormalizedEmail(supabase, profile.normalizedEmail),
+        ]);
+        const selectedRow = rows.find((row) => row.id === input.teamId);
+
+        if (!selectedRow) {
+          throw new BondifyServiceError("TEAM_ACCESS_DENIED", "You do not have access to this team.", {
+            teamId: input.teamId,
+            profileId: profile.id,
+          });
+        }
+
+        return toTeamManagementState({
+          row: selectedRow,
+          incomingInvites,
+          profileId: profile.id,
+        });
       });
     },
 
@@ -1081,38 +1910,7 @@ export function createBondifyServices(context: ServiceContext) {
 
     async listPendingInvitesForCurrentProfile(): Promise<TeamInviteView[]> {
       return withCurrentProfile(async (supabase, profile) => {
-        const { data, error } = await supabase
-          .from("team_invites")
-          .select(
-            `
-              id,
-              team_id,
-              inviter_profile_id,
-              email,
-              normalized_email,
-              status,
-              accepted_profile_id,
-              accepted_at,
-              created_at,
-              updated_at,
-              accepted_profile:profiles!team_invites_accepted_profile_id_fkey (
-                id,
-                email,
-                normalized_email
-              )
-            `,
-          )
-          .eq("normalized_email", profile.normalizedEmail)
-          .eq("status", "pending")
-          .order("created_at", { ascending: true });
-
-        if (error) {
-          throw new BondifyServiceError("INVITE_NOT_FOUND", error.message, {
-            normalizedEmail: profile.normalizedEmail,
-          });
-        }
-
-        return (data as TeamInviteWithAcceptedProfileRow[]).map(toTeamInviteView);
+        return listPendingInvitesForNormalizedEmail(supabase, profile.normalizedEmail);
       });
     },
 
@@ -1220,6 +2018,186 @@ export function createBondifyServices(context: ServiceContext) {
       });
     },
 
+    async getTodayEmojiCheckInState(input: { teamId: string }): Promise<EmojiCheckInTodayState> {
+      return withCurrentProfile(async (supabase, profile) =>
+        loadTodayEmojiCheckInState(supabase, {
+          teamId: input.teamId,
+          profileId: profile.id,
+        }),
+      );
+    },
+
+    async submitTodayEmojiCheckIn(input: { teamId: string; emojis: string[] }): Promise<EmojiCheckInTodayState> {
+      const emojis = validateEmojiCheckInEmojis(input.emojis);
+
+      return withCurrentProfile(async (supabase, profile) => {
+        const { membership, session } = await ensureTodayEmojiCheckInSession(supabase, {
+          teamId: input.teamId,
+          profileId: profile.id,
+        });
+
+        if (session.status === "revealed") {
+          throw new BondifyServiceError(
+            "EMOJI_CHECK_IN_ALREADY_REVEALED",
+            "Today's Emoji Check-In has already been revealed.",
+            {
+              sessionId: session.id,
+              teamId: input.teamId,
+            },
+          );
+        }
+
+        const { error } = await supabase.from("emoji_check_in_submissions").insert({
+          session_id: session.id,
+          membership_id: membership.id,
+          profile_id: profile.id,
+          emojis,
+        });
+
+        if (error) {
+          if (error.code === "23505") {
+            throw new BondifyServiceError("DUPLICATE_DAILY_EMOJI_CHECK_IN", "You already checked in for today.", {
+              sessionId: session.id,
+              membershipId: membership.id,
+            });
+          }
+
+          const latestSession = await getEmojiCheckInSessionWithSubmissions(supabase, {
+            teamId: input.teamId,
+            sessionId: session.id,
+          });
+
+          if (latestSession?.status === "revealed") {
+            throw new BondifyServiceError(
+              "EMOJI_CHECK_IN_ALREADY_REVEALED",
+              "Today's Emoji Check-In has already been revealed.",
+              {
+                sessionId: session.id,
+                teamId: input.teamId,
+              },
+            );
+          }
+
+          throw new BondifyServiceError("INVALID_EMOJI_SELECTION", error.message, {
+            sessionId: session.id,
+            teamId: input.teamId,
+          });
+        }
+
+        return loadTodayEmojiCheckInState(supabase, {
+          teamId: input.teamId,
+          profileId: profile.id,
+        });
+      });
+    },
+
+    async revealTodayEmojiCheckIn(input: { teamId: string; sessionId: string }): Promise<EmojiCheckInRevealSummary> {
+      return withCurrentProfile(async (supabase, profile) => {
+        await requireMembershipAccess(supabase, input.teamId, profile.id);
+        const currentSession = await getEmojiCheckInSessionWithSubmissions(supabase, {
+          teamId: input.teamId,
+          sessionId: input.sessionId,
+        });
+
+        if (!currentSession) {
+          throw new BondifyServiceError(
+            "EMOJI_CHECK_IN_SESSION_NOT_FOUND",
+            "Today's Emoji Check-In session could not be found.",
+            input,
+          );
+        }
+
+        if (currentSession.status === "revealed") {
+          throw new BondifyServiceError(
+            "EMOJI_CHECK_IN_ALREADY_REVEALED",
+            "Today's Emoji Check-In has already been revealed.",
+            input,
+          );
+        }
+
+        const submissions = currentSession.emoji_check_in_submissions;
+        if (submissions.length === 0) {
+          throw new BondifyServiceError(
+            "EMOJI_CHECK_IN_HAS_NO_SUBMISSIONS",
+            "Collect at least one emoji check-in before revealing the team mood.",
+            input,
+          );
+        }
+
+        const updateSessionResult = await supabase
+          .from("emoji_check_in_sessions")
+          .update({
+            status: "revealed",
+            revealed_at: new Date().toISOString(),
+          })
+          .eq("id", input.sessionId)
+          .eq("team_id", input.teamId)
+          .eq("status", "open")
+          .select("id, team_id, session_date, status, revealed_at, created_at, updated_at")
+          .maybeSingle();
+        const updatedSession = updateSessionResult.data;
+        const updateError = updateSessionResult.error;
+
+        if (updateError) {
+          throw new BondifyServiceError("EMOJI_CHECK_IN_ALREADY_REVEALED", updateError.message, input);
+        }
+
+        if (!updatedSession) {
+          const latestSession = await getEmojiCheckInSessionWithSubmissions(supabase, input);
+
+          if (latestSession?.status === "revealed") {
+            throw new BondifyServiceError(
+              "EMOJI_CHECK_IN_ALREADY_REVEALED",
+              "Today's Emoji Check-In has already been revealed.",
+              input,
+            );
+          }
+
+          throw new BondifyServiceError(
+            "EMOJI_CHECK_IN_SESSION_NOT_FOUND",
+            "Today's Emoji Check-In session could not be updated.",
+            input,
+          );
+        }
+
+        const revealedSession = await getEmojiCheckInSessionWithSubmissions(supabase, {
+          teamId: input.teamId,
+          sessionId: input.sessionId,
+        });
+
+        if (!revealedSession) {
+          throw new BondifyServiceError(
+            "EMOJI_CHECK_IN_SESSION_NOT_FOUND",
+            "Today's Emoji Check-In session could not be reloaded after reveal.",
+            input,
+          );
+        }
+
+        return toEmojiCheckInRevealSummary({
+          session: revealedSession,
+          submissions: revealedSession.emoji_check_in_submissions,
+        });
+      });
+    },
+
+    async getEmojiCheckInTimeline(input: { teamId: string; days?: number }): Promise<EmojiCheckInTimelineEntry[]> {
+      return withCurrentProfile(async (supabase, profile) => {
+        await requireMembershipAccess(supabase, input.teamId, profile.id);
+        const days = Math.max(1, input.days ?? EMOJI_CHECK_IN_TIMELINE_DAYS);
+        const rows = await listEmojiCheckInTimelineRows(supabase, {
+          teamId: input.teamId,
+          days,
+        });
+
+        return rows.map((row) =>
+          toEmojiCheckInTimelineEntry({
+            session: row,
+            submissions: row.emoji_check_in_submissions,
+          }),
+        );
+      });
+    },
+
     async getTeamGameState(input: { teamId: string; gameSlug: string }): Promise<TeamGameState> {
       return withCurrentProfile(async (supabase, profile) =>
         loadTeamGameState(supabase, {
@@ -1238,7 +2216,7 @@ export function createBondifyServices(context: ServiceContext) {
           profileId: profile.id,
         });
 
-        if (currentState.activeRound) {
+        if (currentState.activeRound || currentState.twoTruthsRound?.round.status === "open") {
           return currentState;
         }
 
@@ -1253,6 +2231,21 @@ export function createBondifyServices(context: ServiceContext) {
             teamId: input.teamId,
             gameSlug: input.gameSlug,
           });
+        }
+
+        if (isTwoTruthsTemplateSlug(currentState.template.slug)) {
+          const latestState = await loadTeamGameState(supabase, {
+            teamId: input.teamId,
+            gameSlug: input.gameSlug,
+            profileId: profile.id,
+          });
+
+          const structuredRoundId = latestState.twoTruthsRound?.round.id;
+          if (structuredRoundId) {
+            await ensureTwoTruthsRoundRow(supabase, structuredRoundId);
+          }
+
+          return latestState;
         }
 
         return loadTeamGameState(supabase, {
@@ -1325,6 +2318,16 @@ export function createBondifyServices(context: ServiceContext) {
         }
 
         const roundRow: GameRoundWithTemplateRow = round;
+        if (isTwoTruthsTemplateSlug(roundRow.game_template.slug)) {
+          throw new BondifyServiceError(
+            "LEGACY_TWO_TRUTHS_TEMPLATE_NOT_SUPPORTED",
+            "This structured round reveals through the dedicated Two Truths flow.",
+            {
+              roundId: input.roundId,
+              gameSlug: input.gameSlug,
+            },
+          );
+        }
 
         if (roundRow.status === "revealed") {
           throw new BondifyServiceError("ROUND_ALREADY_REVEALED", "This game has already been revealed.", {
@@ -1492,6 +2495,27 @@ export function createBondifyServices(context: ServiceContext) {
           });
         }
 
+        const { data: templateRow, error: templateError } = await supabase
+          .from("game_templates")
+          .select("id, slug, name, prompt, is_history_enabled")
+          .eq("id", roundRow.game_template_id)
+          .single();
+
+        if (templateError) {
+          throw new BondifyServiceError("INVALID_GAME_TEMPLATE", templateError.message, {
+            gameTemplateId: roundRow.game_template_id,
+          });
+        }
+
+        const templateProjection: TemplateProjectionRow = templateRow;
+        if (isTwoTruthsTemplateSlug(templateProjection.slug)) {
+          throw new BondifyServiceError(
+            "LEGACY_TWO_TRUTHS_TEMPLATE_NOT_SUPPORTED",
+            "This structured round uses dedicated truth/lie entry forms instead of the old free-text response flow.",
+            { roundId: input.roundId },
+          );
+        }
+
         const membership = await requireMembershipAccess(supabase, roundRow.team_id, profile.id);
         const responseId = crypto.randomUUID();
 
@@ -1534,6 +2558,362 @@ export function createBondifyServices(context: ServiceContext) {
         });
 
         return toResponseRecord(createdResponseRow);
+      });
+    },
+
+    async submitTwoTruthsEntry(input: {
+      roundId: string;
+      statementOne: string;
+      statementTwo: string;
+      statementThree: string;
+      lieStatementIndex: number;
+    }): Promise<TwoTruthsRoundState> {
+      const statementOne = validateTwoTruthsStatement(input.statementOne, 1);
+      const statementTwo = validateTwoTruthsStatement(input.statementTwo, 2);
+      const statementThree = validateTwoTruthsStatement(input.statementThree, 3);
+      const lieStatementIndex = validateTwoTruthsLieIndex(input.lieStatementIndex);
+
+      return withCurrentProfile(async (supabase, profile) => {
+        const { data: round, error: roundError } = await supabase
+          .from("game_rounds")
+          .select(
+            "id, team_id, game_template_id, opened_by_profile_id, status, revealed_at, history_visible_until, history_cleared_at, created_at, updated_at",
+          )
+          .eq("id", input.roundId)
+          .maybeSingle();
+
+        if (roundError) {
+          throw new BondifyServiceError("ROUND_NOT_FOUND", roundError.message, { roundId: input.roundId });
+        }
+
+        if (!round) {
+          throw new BondifyServiceError("ROUND_NOT_FOUND", "Round not found.", { roundId: input.roundId });
+        }
+
+        const roundRow: GameRoundRow = round;
+        const template = await getTemplateBySlug(supabase, TWO_TRUTHS_TEMPLATE_SLUG);
+        if (roundRow.game_template_id !== template.id) {
+          throw new BondifyServiceError(
+            "LEGACY_TWO_TRUTHS_TEMPLATE_NOT_SUPPORTED",
+            "This round is not using the structured Two Truths and a Lie template.",
+            { roundId: input.roundId },
+          );
+        }
+
+        if (roundRow.status !== "open") {
+          throw new BondifyServiceError("ROUND_NOT_OPEN", "This round is no longer collecting entries.", {
+            roundId: input.roundId,
+          });
+        }
+
+        const membership = await requireMembershipAccess(supabase, roundRow.team_id, profile.id);
+        const structuredRound = await ensureTwoTruthsRoundRow(supabase, roundRow.id);
+
+        if (structuredRound.phase !== "collecting") {
+          throw new BondifyServiceError(
+            "TWO_TRUTHS_ROUND_PHASE_MISMATCH",
+            "This round is no longer collecting structured entries.",
+            { roundId: input.roundId, phase: structuredRound.phase },
+          );
+        }
+
+        const entryId = crypto.randomUUID();
+        const { error: insertError } = await supabase.from("two_truths_entries").insert({
+          id: entryId,
+          game_round_id: input.roundId,
+          author_membership_id: membership.id,
+          author_profile_id: profile.id,
+          statement_one: statementOne,
+          statement_two: statementTwo,
+          statement_three: statementThree,
+          lie_statement_index: lieStatementIndex,
+        });
+
+        if (insertError) {
+          throw mapDuplicateInsertError(
+            insertError,
+            new BondifyServiceError(
+              "DUPLICATE_TWO_TRUTHS_ENTRY",
+              "You have already submitted your set for this round.",
+              {
+                roundId: input.roundId,
+                membershipId: membership.id,
+              },
+            ),
+          );
+        }
+
+        const { data: createdEntry, error: createdEntryError } = await supabase
+          .from("two_truths_entries")
+          .select("created_at")
+          .eq("id", entryId)
+          .single();
+
+        if (createdEntryError) {
+          throw new BondifyServiceError("ROUND_NOT_FOUND", createdEntryError.message, {
+            roundId: input.roundId,
+            entryId,
+          });
+        }
+
+        const createdEntryRow: { created_at: string } = createdEntry;
+
+        await markRoundHistoryVisibleIfEligible(supabase, {
+          round: roundRow,
+          firstResponseCreatedAt: createdEntryRow.created_at,
+        });
+
+        return loadTwoTruthsRoundState(supabase, {
+          round: roundRow,
+          membership,
+        });
+      });
+    },
+
+    async closeTwoTruthsCollection(input: { roundId: string }): Promise<TwoTruthsRoundState> {
+      return withCurrentProfile(async (supabase, profile) => {
+        const { data: round, error: roundError } = await supabase
+          .from("game_rounds")
+          .select(
+            "id, team_id, game_template_id, opened_by_profile_id, status, revealed_at, history_visible_until, history_cleared_at, created_at, updated_at",
+          )
+          .eq("id", input.roundId)
+          .maybeSingle();
+
+        if (roundError) {
+          throw new BondifyServiceError("ROUND_NOT_FOUND", roundError.message, { roundId: input.roundId });
+        }
+
+        if (!round) {
+          throw new BondifyServiceError("ROUND_NOT_FOUND", "Round not found.", { roundId: input.roundId });
+        }
+
+        const roundRow: GameRoundRow = round;
+        const template = await getTemplateBySlug(supabase, TWO_TRUTHS_TEMPLATE_SLUG);
+        if (roundRow.game_template_id !== template.id) {
+          throw new BondifyServiceError(
+            "LEGACY_TWO_TRUTHS_TEMPLATE_NOT_SUPPORTED",
+            "This round is not using the structured Two Truths and a Lie template.",
+            { roundId: input.roundId },
+          );
+        }
+
+        const membership = await requireMembershipAccess(supabase, roundRow.team_id, profile.id);
+        const structuredRound = await ensureTwoTruthsRoundRow(supabase, roundRow.id);
+
+        if (structuredRound.phase !== "collecting") {
+          throw new BondifyServiceError(
+            "TWO_TRUTHS_ROUND_PHASE_MISMATCH",
+            "This round has already moved past collection.",
+            { roundId: input.roundId, phase: structuredRound.phase },
+          );
+        }
+
+        const entryRows = await listTwoTruthsEntries(supabase, input.roundId);
+        if (entryRows.length < 2) {
+          throw new BondifyServiceError(
+            "TWO_TRUTHS_INSUFFICIENT_ENTRIES",
+            "Collect at least two submitted sets before starting voting.",
+            { roundId: input.roundId, submittedEntryCount: entryRows.length },
+          );
+        }
+
+        const now = new Date().toISOString();
+        const { error: markEntriesError } = await supabase
+          .from("two_truths_entries")
+          .update({ included_in_voting: true })
+          .eq("game_round_id", input.roundId)
+          .eq("included_in_voting", false);
+
+        if (markEntriesError) {
+          throw new BondifyServiceError("TWO_TRUTHS_ROUND_PHASE_MISMATCH", markEntriesError.message, {
+            roundId: input.roundId,
+          });
+        }
+
+        const { error: updateStateError } = await supabase
+          .from("two_truths_rounds")
+          .update({
+            phase: "voting",
+            collection_closed_at: now,
+            voting_started_at: now,
+          })
+          .eq("game_round_id", input.roundId)
+          .eq("phase", "collecting");
+
+        if (updateStateError) {
+          throw new BondifyServiceError("TWO_TRUTHS_ROUND_PHASE_MISMATCH", updateStateError.message, {
+            roundId: input.roundId,
+          });
+        }
+
+        return loadTwoTruthsRoundState(supabase, {
+          round: roundRow,
+          membership,
+        });
+      });
+    },
+
+    async getTwoTruthsGuessProgress(input: { roundId: string }): Promise<TwoTruthsGuessProgress> {
+      return withCurrentProfile(async (supabase, profile) => {
+        const { data: round, error: roundError } = await supabase
+          .from("game_rounds")
+          .select(
+            "id, team_id, game_template_id, opened_by_profile_id, status, revealed_at, history_visible_until, history_cleared_at, created_at, updated_at",
+          )
+          .eq("id", input.roundId)
+          .maybeSingle();
+
+        if (roundError) {
+          throw new BondifyServiceError("ROUND_NOT_FOUND", roundError.message, { roundId: input.roundId });
+        }
+
+        if (!round) {
+          throw new BondifyServiceError("ROUND_NOT_FOUND", "Round not found.", { roundId: input.roundId });
+        }
+
+        const roundRow: GameRoundRow = round;
+        const membership = await requireMembershipAccess(supabase, roundRow.team_id, profile.id);
+        const state = await loadTwoTruthsRoundState(supabase, {
+          round: roundRow,
+          membership,
+        });
+
+        return state.guessProgress;
+      });
+    },
+
+    async submitTwoTruthsGuess(input: {
+      roundId: string;
+      targetEntryId: string;
+      guessedLieIndex: number;
+    }): Promise<TwoTruthsRoundState> {
+      const guessedLieIndex = validateTwoTruthsLieIndex(input.guessedLieIndex);
+
+      return withCurrentProfile(async (supabase, profile) => {
+        const { data: round, error: roundError } = await supabase
+          .from("game_rounds")
+          .select(
+            "id, team_id, game_template_id, opened_by_profile_id, status, revealed_at, history_visible_until, history_cleared_at, created_at, updated_at",
+          )
+          .eq("id", input.roundId)
+          .maybeSingle();
+
+        if (roundError) {
+          throw new BondifyServiceError("ROUND_NOT_FOUND", roundError.message, { roundId: input.roundId });
+        }
+
+        if (!round) {
+          throw new BondifyServiceError("ROUND_NOT_FOUND", "Round not found.", { roundId: input.roundId });
+        }
+
+        const roundRow: GameRoundRow = round;
+        if (roundRow.status !== "open") {
+          throw new BondifyServiceError("ROUND_NOT_OPEN", "This round is no longer accepting guesses.", {
+            roundId: input.roundId,
+          });
+        }
+
+        const membership = await requireMembershipAccess(supabase, roundRow.team_id, profile.id);
+        const structuredRound = await ensureTwoTruthsRoundRow(supabase, roundRow.id);
+        if (structuredRound.phase !== "voting") {
+          throw new BondifyServiceError("TWO_TRUTHS_ROUND_PHASE_MISMATCH", "This round is not in the voting phase.", {
+            roundId: input.roundId,
+            phase: structuredRound.phase,
+          });
+        }
+
+        const entryRows = await listTwoTruthsEntries(supabase, input.roundId);
+        const targetEntry = entryRows.find((entry) => entry.id === input.targetEntryId && entry.included_in_voting);
+        if (!targetEntry) {
+          throw new BondifyServiceError("TWO_TRUTHS_ENTRY_NOT_FOUND", "That teammate entry could not be found.", {
+            roundId: input.roundId,
+            targetEntryId: input.targetEntryId,
+          });
+        }
+
+        if (targetEntry.author_membership_id === membership.id) {
+          throw new BondifyServiceError("TWO_TRUTHS_SELF_GUESS", "You cannot guess on your own submitted set.", {
+            roundId: input.roundId,
+            targetEntryId: input.targetEntryId,
+          });
+        }
+
+        const guessId = crypto.randomUUID();
+        const { error: insertError } = await supabase.from("two_truths_guesses").insert({
+          id: guessId,
+          game_round_id: input.roundId,
+          voter_membership_id: membership.id,
+          voter_profile_id: profile.id,
+          target_entry_id: input.targetEntryId,
+          guessed_lie_index: guessedLieIndex,
+        });
+
+        if (insertError) {
+          throw mapDuplicateInsertError(
+            insertError,
+            new BondifyServiceError("DUPLICATE_TWO_TRUTHS_GUESS", "You have already guessed on this teammate's set.", {
+              roundId: input.roundId,
+              targetEntryId: input.targetEntryId,
+              membershipId: membership.id,
+            }),
+          );
+        }
+
+        const state = await loadTwoTruthsRoundState(supabase, {
+          round: roundRow,
+          membership,
+        });
+
+        if (state.guessProgress.allRequiredGuessesSubmitted) {
+          return finalizeTwoTruthsVoting(supabase, {
+            round: roundRow,
+            membership,
+          });
+        }
+
+        return state;
+      });
+    },
+
+    async closeTwoTruthsVoting(input: { roundId: string }): Promise<TwoTruthsRoundState> {
+      return withCurrentProfile(async (supabase, profile) => {
+        const { data: round, error: roundError } = await supabase
+          .from("game_rounds")
+          .select(
+            "id, team_id, game_template_id, opened_by_profile_id, status, revealed_at, history_visible_until, history_cleared_at, created_at, updated_at",
+          )
+          .eq("id", input.roundId)
+          .maybeSingle();
+
+        if (roundError) {
+          throw new BondifyServiceError("ROUND_NOT_FOUND", roundError.message, { roundId: input.roundId });
+        }
+
+        if (!round) {
+          throw new BondifyServiceError("ROUND_NOT_FOUND", "Round not found.", { roundId: input.roundId });
+        }
+
+        const roundRow: GameRoundRow = round;
+        if (roundRow.status !== "open") {
+          throw new BondifyServiceError("ROUND_NOT_OPEN", "This round is no longer open.", {
+            roundId: input.roundId,
+          });
+        }
+
+        const membership = await requireMembershipAccess(supabase, roundRow.team_id, profile.id);
+        const structuredRound = await ensureTwoTruthsRoundRow(supabase, roundRow.id);
+        if (structuredRound.phase !== "voting") {
+          throw new BondifyServiceError("TWO_TRUTHS_ROUND_PHASE_MISMATCH", "This round is not in the voting phase.", {
+            roundId: input.roundId,
+            phase: structuredRound.phase,
+          });
+        }
+
+        return finalizeTwoTruthsVoting(supabase, {
+          round: roundRow,
+          membership,
+        });
       });
     },
 
@@ -1595,7 +2975,7 @@ export function createBondifyServices(context: ServiceContext) {
     async getParticipantSafeHistory(teamId: string): Promise<ParticipantSafeHistoryEntry[]> {
       return withCurrentProfile(async (supabase, profile) => {
         await requireMembershipAccess(supabase, teamId, profile.id);
-        return toParticipantSafeHistoryEntries(await listVisibleHistoryRows(supabase, teamId));
+        return toParticipantSafeHistoryEntries(supabase, await listVisibleHistoryRows(supabase, teamId));
       });
     },
 
@@ -1603,7 +2983,7 @@ export function createBondifyServices(context: ServiceContext) {
       return withCurrentProfile(async (supabase, profile) => {
         await requireMembershipAccess(supabase, teamId, profile.id);
         const team = await getTeamForMember(supabase, teamId);
-        const entries = toParticipantSafeHistoryEntries(await listVisibleHistoryRows(supabase, teamId));
+        const entries = await toParticipantSafeHistoryEntries(supabase, await listVisibleHistoryRows(supabase, teamId));
 
         return toTeamHistoryState({
           team,

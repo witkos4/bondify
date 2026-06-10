@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { APIRoute } from "astro";
 import { createBondifyServices, BondifyServiceError } from "@/lib/services/bondify";
-import { setDashboardFlash } from "@/lib/dashboard-flash";
+import { getTeamSurfaceHref, parseTeamSurface, setDashboardFlash } from "@/lib/dashboard-flash";
 
 export const prerender = false;
 
@@ -24,6 +24,20 @@ function readStringField(form: FormData, key: string): string {
 
 export const POST: APIRoute = async (context) => {
   const form = await context.request.formData();
+  const returnSurface = parseTeamSurface(form.get("surface"));
+
+  if (returnSurface === null) {
+    setDashboardFlash(context.cookies, {
+      type: "invite-results",
+      teamId: readStringField(form, "teamId"),
+      submittedEmails: splitInviteEmails(readStringField(form, "emails")),
+      results: [],
+      message: "Choose a valid return surface before inviting teammates.",
+      surface: "dashboard",
+    });
+    return context.redirect("/dashboard");
+  }
+
   const parsed = inviteSchema.safeParse({
     teamId: form.get("teamId"),
     emails: form.get("emails"),
@@ -31,7 +45,7 @@ export const POST: APIRoute = async (context) => {
 
   const submittedEmails = splitInviteEmails(readStringField(form, "emails"));
   const fallbackTeamId = readStringField(form, "teamId");
-  const redirectTarget = fallbackTeamId ? `/dashboard?team=${fallbackTeamId}` : "/dashboard";
+  const redirectTarget = getTeamSurfaceHref({ surface: returnSurface, teamId: fallbackTeamId || null });
 
   if (!parsed.success) {
     setDashboardFlash(context.cookies, {
@@ -40,6 +54,7 @@ export const POST: APIRoute = async (context) => {
       submittedEmails,
       results: [],
       message: parsed.error.issues[0]?.message ?? "Add at least one teammate email.",
+      surface: returnSurface,
     });
     return context.redirect(redirectTarget);
   }
@@ -68,8 +83,9 @@ export const POST: APIRoute = async (context) => {
       submittedEmails,
       results,
       message,
+      surface: returnSurface,
     });
-    return context.redirect(`/dashboard?team=${parsed.data.teamId}`);
+    return context.redirect(getTeamSurfaceHref({ surface: returnSurface, teamId: parsed.data.teamId }));
   } catch (error) {
     const message = error instanceof BondifyServiceError ? error.message : "We couldn't send invites right now.";
 
@@ -79,7 +95,8 @@ export const POST: APIRoute = async (context) => {
       submittedEmails,
       results: [],
       message,
+      surface: returnSurface,
     });
-    return context.redirect(`/dashboard?team=${parsed.data.teamId}`);
+    return context.redirect(getTeamSurfaceHref({ surface: returnSurface, teamId: parsed.data.teamId }));
   }
 };

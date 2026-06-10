@@ -5,9 +5,10 @@ import { setGameFlash } from "@/lib/game-flash";
 
 export const prerender = false;
 
-const startGameSchema = z.object({
-  teamId: z.uuid("Choose a valid team before starting a game."),
-  gameSlug: z.string().trim().min(1, "Choose a valid game before starting."),
+const closeCollectionSchema = z.object({
+  teamId: z.uuid("Choose a valid team before closing collection."),
+  gameSlug: z.string().trim().min(1, "Choose a valid game before closing collection."),
+  roundId: z.uuid("Choose an active structured round before closing collection."),
 });
 
 function readStringField(form: FormData, key: string): string {
@@ -21,9 +22,10 @@ function gamePath(teamId: string, gameSlug: string): string {
 
 export const POST: APIRoute = async (context) => {
   const form = await context.request.formData();
-  const parsed = startGameSchema.safeParse({
+  const parsed = closeCollectionSchema.safeParse({
     teamId: form.get("teamId"),
     gameSlug: form.get("gameSlug"),
+    roundId: form.get("roundId"),
   });
 
   const fallbackTeamId = readStringField(form, "teamId");
@@ -32,10 +34,10 @@ export const POST: APIRoute = async (context) => {
 
   if (!parsed.success) {
     setGameFlash(context.cookies, {
-      type: "game-start-error",
+      type: "two-truths-collection-error",
       teamId: fallbackTeamId,
       gameSlug: fallbackGameSlug,
-      message: parsed.error.issues[0]?.message ?? "Choose a valid game before starting.",
+      message: parsed.error.issues[0]?.message ?? "Choose a valid structured round before closing collection.",
     });
     return context.redirect(fallbackPath);
   }
@@ -46,26 +48,23 @@ export const POST: APIRoute = async (context) => {
   });
 
   try {
-    const gameState = await services.startTeamGameRound({
-      teamId: parsed.data.teamId,
-      gameSlug: parsed.data.gameSlug,
+    await services.closeTwoTruthsCollection({
+      roundId: parsed.data.roundId,
     });
 
     setGameFlash(context.cookies, {
-      type: "game-started",
+      type: "two-truths-collection-closed",
       teamId: parsed.data.teamId,
       gameSlug: parsed.data.gameSlug,
-      message:
-        gameState.twoTruthsRound !== null
-          ? "The structured round is open. Teammates can start adding their sets now."
-          : "The game is open. Teammates can submit their anonymous responses now.",
+      message: "Collection is locked. Structured voting is ready.",
     });
     return context.redirect(gamePath(parsed.data.teamId, parsed.data.gameSlug));
   } catch (error) {
-    const message = error instanceof BondifyServiceError ? error.message : "We couldn't start this game right now.";
+    const message =
+      error instanceof BondifyServiceError ? error.message : "We couldn't close collection for this structured round.";
 
     setGameFlash(context.cookies, {
-      type: "game-start-error",
+      type: "two-truths-collection-error",
       teamId: parsed.data.teamId,
       gameSlug: parsed.data.gameSlug,
       message,

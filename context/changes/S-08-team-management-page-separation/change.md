@@ -1,9 +1,9 @@
 ---
 change_id: S-08-team-management-page-separation
 title: Team management page separation
-status: new
+status: implementing
 created: 2026-06-05
-updated: 2026-06-05
+updated: 2026-06-10
 archived_at: null
 ---
 

@@ -1,9 +1,9 @@
 ---
 change_id: S-07-daily-emoji-check-in-loop
 title: Daily Emoji Check-In loop
-status: new
+status: implementing
 created: 2026-06-05
-updated: 2026-06-05
+updated: 2026-06-09
 archived_at: null
 ---
 

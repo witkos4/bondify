@@ -29,6 +29,46 @@ type GameFlash =
       message: string;
     }
   | {
+      type: "two-truths-entry-submitted";
+      teamId: string;
+      gameSlug: string;
+      message: string;
+    }
+  | {
+      type: "two-truths-entry-error";
+      teamId: string;
+      gameSlug: string;
+      statementOne: string;
+      statementTwo: string;
+      statementThree: string;
+      lieStatementIndex: string;
+      message: string;
+    }
+  | {
+      type: "two-truths-collection-closed";
+      teamId: string;
+      gameSlug: string;
+      message: string;
+    }
+  | {
+      type: "two-truths-collection-error";
+      teamId: string;
+      gameSlug: string;
+      message: string;
+    }
+  | {
+      type: "two-truths-vote-submitted";
+      teamId: string;
+      gameSlug: string;
+      message: string;
+    }
+  | {
+      type: "two-truths-vote-error";
+      teamId: string;
+      gameSlug: string;
+      message: string;
+    }
+  | {
       type: "game-revealed";
       teamId: string;
       gameSlug: string;
