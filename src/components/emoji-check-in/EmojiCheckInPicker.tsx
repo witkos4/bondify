@@ -52,7 +52,7 @@ export default function EmojiCheckInPicker({
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {options.map((option) => {
           const isSelected = selectedEmojis.includes(option.emoji);
           const isLocked = !isSelected && selectedEmojis.length >= MAX_SELECTIONS;
@@ -77,7 +77,6 @@ export default function EmojiCheckInPicker({
                 <div>
                   <p className="text-3xl">{option.emoji}</p>
                   <p className="mt-3 text-base font-semibold text-white">{option.label}</p>
-                  <p className="mt-2 text-sm leading-6 text-blue-100/65">{option.description}</p>
                 </div>
                 <span
                   className={[

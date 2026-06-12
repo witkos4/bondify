@@ -2,6 +2,8 @@
 
 This file provides guidance to AI Agent when working with code in this repository.
 
+@AGENTS.md
+
 ## Commands
 
 - `npm run dev` — start dev server (Cloudflare workerd runtime)

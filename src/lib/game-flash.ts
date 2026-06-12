@@ -63,6 +63,12 @@ type GameFlash =
       message: string;
     }
   | {
+      type: "two-truths-voting-closed";
+      teamId: string;
+      gameSlug: string;
+      message: string;
+    }
+  | {
       type: "two-truths-vote-error";
       teamId: string;
       gameSlug: string;

@@ -71,6 +71,7 @@ export interface BondifyTeamMembership {
   teamId: string;
   profileId: string;
   createdAt: string;
+  removedAt: string | null;
 }
 
 export interface BondifyTeamInvite {
@@ -300,6 +301,7 @@ export interface ParticipantSafeHistoryEntry {
 export interface TeamHistoryState {
   team: BondifyTeam;
   entries: ParticipantSafeHistoryEntry[];
+  emojiCheckInTimeline: EmojiCheckInTimelineEntry[];
   canClearHistory: boolean;
 }
 
@@ -319,6 +321,20 @@ export interface TeamManagementState {
   pendingInvites: TeamInviteView[];
   incomingInvites: TeamInviteView[];
   canManageTeam: boolean;
+}
+
+export interface TeamMemberRemoveResult {
+  teamId: string;
+  membershipId: string;
+  removedProfileId: string;
+  removedEmail: string;
+  removedAt: string;
+}
+
+export interface TeamDeleteResult {
+  deletedTeamId: string;
+  deletedTeamName: string;
+  redirectTeamId: string | null;
 }
 
 export type BondifyGameTemplateProjection = Pick<

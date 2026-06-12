@@ -373,9 +373,9 @@ Finish the user-visible experience with a clear reveal, summary-only history int
 
 #### Automated
 
-- [ ] 2.1 `npm run lint` passes for the specialized page UI, flash changes, and Two-Truths routes
-- [ ] 2.2 `npm run build` passes with the new collection, voting, and close flows
-- [ ] 2.3 Invalid form payloads, duplicate guesses, and self-guess attempts fail safely with controlled flash messages
+- [x] 2.1 `npm run lint` passes for the specialized page UI, flash changes, and Two-Truths routes
+- [x] 2.2 `npm run build` passes with the new collection, voting, and close flows
+- [x] 2.3 Invalid form payloads, duplicate guesses, and self-guess attempts fail safely with controlled flash messages
 
 #### Manual
 
@@ -389,9 +389,9 @@ Finish the user-visible experience with a clear reveal, summary-only history int
 
 #### Automated
 
-- [ ] 3.1 `npm run lint` passes for all `S-09` touched files
-- [ ] 3.2 `npm run build` passes after history integration and legacy-template cleanup
-- [ ] 3.3 `git diff --check` reports no whitespace errors in `S-09` touched files
+- [x] 3.1 `npm run lint` passes for all `S-09` touched files
+- [x] 3.2 `npm run build` passes after history integration and legacy-template cleanup
+- [x] 3.3 `git diff --check` reports no whitespace errors in `S-09` touched files
 
 #### Manual
 
@@ -400,3 +400,8 @@ Finish the user-visible experience with a clear reveal, summary-only history int
 - [ ] 3.6 Manually closing an incomplete voting round reveals only recorded guesses and excludes missing votes from scoring
 - [ ] 3.7 A revealed structured round appears in team history as a summary entry
 - [ ] 3.8 The old wish-based template is no longer reachable through normal game selection
+
+### 2026-06-12 Verification Note
+
+- The slice is implemented and was included in the manual cross-slice sweep after the structured rules were finalized.
+- Core-path confidence is now good enough to treat the feature as landed, but the remaining high-value checks are still the edge cases listed above: incomplete-vote manual close, history-summary rendering, and legacy-template reachability.

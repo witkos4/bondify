@@ -4,7 +4,7 @@ import Topbar from "@/components/Topbar.astro";
 import { isEmojiCheckInTemplateSlug } from "@/lib/emoji-check-in";
 import { consumeGameFlash } from "@/lib/game-flash";
 import { callBondifyService, createBondifyServices } from "@/lib/services/bondify";
-import type { TeamGameState } from "@/types";
+import type { TeamGameState, TwoTruthsEntryRecord, TwoTruthsGuessRecord } from "@/types";
 
 export const prerender = false;
 
@@ -55,12 +55,59 @@ const pageTitle = isEmojiCheckInRoute
   : gameState
     ? `${gameState.template.name} | Bondify`
     : "Team game | Bondify";
+const twoTruthsPhase = twoTruthsRound?.structuredRound.phase ?? null;
+const isTwoTruthsCollecting = twoTruthsPhase === "collecting";
+const isTwoTruthsVoting = twoTruthsPhase === "voting";
+const twoTruthsVotingEntries = twoTruthsRound?.entries.filter((entry) => entry.includedInVoting) ?? [];
+const currentMemberTwoTruthsEntry =
+  twoTruthsRound?.entries.find((entry) => entry.id === twoTruthsRound.currentMemberEntryId) ?? null;
+const isCurrentMemberTwoTruthsParticipant = currentMemberTwoTruthsEntry !== null;
+const currentMembershipId = gameState?.membership.id ?? null;
+const currentMemberGuessesByTargetEntryId = new Map(
+  (twoTruthsRound?.guesses ?? [])
+    .filter((guess) => guess.voter.membershipId === currentMembershipId)
+    .map((guess) => [guess.targetEntryId, guess]),
+);
+const twoTruthsVoteTargets = twoTruthsVotingEntries.filter(
+  (entry) => entry.id !== twoTruthsRound?.currentMemberEntryId,
+);
+const currentMemberOutstandingVoteCount = twoTruthsVoteTargets.filter(
+  (entry) => !currentMemberGuessesByTargetEntryId.has(entry.id),
+).length;
+const twoTruthsScoresByMembershipId = new Map(
+  (twoTruthsRound?.revealSummary?.scores ?? []).map((score) => [score.participant.membershipId, score]),
+);
 
 function formatResultTime(createdAt: string) {
   return new Intl.DateTimeFormat("en", {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(createdAt));
+}
+
+function formatDateTime(createdAt: string | null) {
+  if (!createdAt) {
+    return "Not available";
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(createdAt));
+}
+
+function statementLabel(index: number) {
+  return `Statement ${index}`;
+}
+
+function findGuessesForEntry(entryId: string): TwoTruthsGuessRecord[] {
+  return (twoTruthsRound?.guesses ?? []).filter((guess) => guess.targetEntryId === entryId);
+}
+
+function guessMatchesEntry(entry: TwoTruthsEntryRecord, guess: TwoTruthsGuessRecord) {
+  return entry.lieStatementIndex === guess.guessedLieIndex;
 }
 ---
 
@@ -122,6 +169,7 @@ function formatResultTime(createdAt: string) {
                       matchingFlash.type === "two-truths-entry-submitted" ||
                       matchingFlash.type === "two-truths-collection-closed" ||
                       matchingFlash.type === "two-truths-vote-submitted" ||
+                      matchingFlash.type === "two-truths-voting-closed" ||
                       matchingFlash.type === "game-revealed"
                         ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100"
                         : "border-red-500/30 bg-red-900/40 text-red-200",
@@ -141,121 +189,499 @@ function formatResultTime(createdAt: string) {
                           Structured round
                         </p>
                         <h2 class="mt-2 text-3xl font-semibold">
-                          {twoTruthsRound.structuredRound.phase === "collecting"
+                          {isTwoTruthsCollecting
                             ? "Collection is open"
-                            : twoTruthsRound.structuredRound.phase === "voting"
+                            : isTwoTruthsVoting
                               ? "Voting is active"
                               : "Reveal is ready"}
                         </h2>
                         <p class="mt-3 text-sm leading-6 text-blue-100/65">
-                          {twoTruthsRound.structuredRound.phase === "collecting"
-                            ? "Phase 1 switches this game onto the structured contract. Each teammate submits one set of three statements and locks it in."
-                            : twoTruthsRound.structuredRound.phase === "voting"
-                              ? "The backend voting model is ready. The richer teammate-by-teammate voting UI lands in the next implementation phase."
-                              : "The backend reveal state is ready. A richer reveal summary UI lands in the next implementation phase."}
+                          {isTwoTruthsCollecting
+                            ? "Each teammate can submit one authored set. Once collection closes, only submitted sets move into the round and edits stay locked."
+                            : isTwoTruthsVoting
+                              ? "Author names are visible, but guesses stay private until reveal. Every submitted participant votes once on every other set."
+                              : "The round is closed. Scores reward both correct guesses and the teammates each author managed to fool."}
                         </p>
                       </div>
                       <div class="rounded-3xl border border-white/10 bg-white/6 px-5 py-4 text-right">
-                        <p class="text-xs font-semibold tracking-[0.2em] text-blue-100/50 uppercase">Submitted sets</p>
-                        <p class="mt-2 text-4xl font-semibold text-white">{twoTruthsRound.entries.length}</p>
+                        <p class="text-xs font-semibold tracking-[0.2em] text-blue-100/50 uppercase">
+                          {isTwoTruthsCollecting ? "Submitted sets" : "Votes recorded"}
+                        </p>
+                        <p class="mt-2 text-4xl font-semibold text-white">
+                          {isTwoTruthsCollecting
+                            ? twoTruthsRound.entries.length
+                            : `${twoTruthsRound.guessProgress.submittedGuessCount}/${twoTruthsRound.guessProgress.requiredTotalGuessCount}`}
+                        </p>
+                        <p class="mt-2 text-sm text-blue-100/60">
+                          {isTwoTruthsCollecting
+                            ? `${twoTruthsRound.entries.length === 1 ? "1 set is" : "Sets are"} ready for this round`
+                            : isTwoTruthsVoting
+                              ? "Reveal triggers automatically when the last required guess lands"
+                              : `${twoTruthsRound.revealSummary?.totalGuessesRecorded ?? 0} total guess${twoTruthsRound.revealSummary?.totalGuessesRecorded === 1 ? "" : "es"} counted`}
+                        </p>
                       </div>
                     </div>
 
-                    {twoTruthsRound.structuredRound.phase === "collecting" ? (
-                      twoTruthsRound.hasCurrentMemberSubmitted ? (
-                        <div class="rounded-3xl border border-emerald-300/20 bg-emerald-300/10 p-5">
-                          <p class="text-xs font-semibold tracking-[0.2em] text-emerald-100/70 uppercase">Locked in</p>
-                          <h3 class="mt-2 text-2xl font-semibold">Your set is saved</h3>
-                          <p class="mt-3 text-sm leading-6 text-emerald-50/80">
-                            You cannot edit it now. The next phase adds explicit collection close and team voting.
-                          </p>
+                    {isTwoTruthsCollecting ? (
+                      <div class="grid gap-6 lg:grid-cols-[1fr_0.8fr]">
+                        <div class="space-y-5">
+                          {twoTruthsRound.hasCurrentMemberSubmitted ? (
+                            <div class="rounded-3xl border border-emerald-300/20 bg-emerald-300/10 p-5">
+                              <p class="text-xs font-semibold tracking-[0.2em] text-emerald-100/70 uppercase">
+                                Locked in
+                              </p>
+                              <h3 class="mt-2 text-2xl font-semibold">Your set is saved</h3>
+                              <p class="mt-3 text-sm leading-6 text-emerald-50/80">
+                                You are part of this round. Your statements are locked, and collection can close as soon
+                                as the team has enough submitted sets.
+                              </p>
+                            </div>
+                          ) : (
+                            <form method="POST" action="/api/games/two-truths-entry" class="space-y-5">
+                              <input type="hidden" name="teamId" value={gameState.teamId} />
+                              <input type="hidden" name="gameSlug" value={gameState.template.slug} />
+                              <input type="hidden" name="roundId" value={twoTruthsRound.round.id} />
+                              <div class="grid gap-4">
+                                <div>
+                                  <label class="block text-sm font-medium text-blue-100/75" for="statement-one">
+                                    Statement 1
+                                  </label>
+                                  <textarea
+                                    id="statement-one"
+                                    name="statementOne"
+                                    rows="3"
+                                    maxlength="200"
+                                    required
+                                    placeholder="Write a short statement..."
+                                    class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
+                                    set:text={twoTruthsStatementOneValue}
+                                  />
+                                </div>
+                                <div>
+                                  <label class="block text-sm font-medium text-blue-100/75" for="statement-two">
+                                    Statement 2
+                                  </label>
+                                  <textarea
+                                    id="statement-two"
+                                    name="statementTwo"
+                                    rows="3"
+                                    maxlength="200"
+                                    required
+                                    placeholder="Write a short statement..."
+                                    class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
+                                    set:text={twoTruthsStatementTwoValue}
+                                  />
+                                </div>
+                                <div>
+                                  <label class="block text-sm font-medium text-blue-100/75" for="statement-three">
+                                    Statement 3
+                                  </label>
+                                  <textarea
+                                    id="statement-three"
+                                    name="statementThree"
+                                    rows="3"
+                                    maxlength="200"
+                                    required
+                                    placeholder="Write a short statement..."
+                                    class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
+                                    set:text={twoTruthsStatementThreeValue}
+                                  />
+                                </div>
+                              </div>
+
+                              <fieldset>
+                                <legend class="text-sm font-medium text-blue-100/75">
+                                  Which statement is the lie?
+                                </legend>
+                                <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                                  {[1, 2, 3].map((index) => (
+                                    <label class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm">
+                                      <input
+                                        type="radio"
+                                        name="lieStatementIndex"
+                                        value={index}
+                                        checked={twoTruthsLieStatementIndexValue === String(index)}
+                                        class="h-4 w-4"
+                                      />
+                                      {statementLabel(index)}
+                                    </label>
+                                  ))}
+                                </div>
+                              </fieldset>
+
+                              <button
+                                type="submit"
+                                class="w-full rounded-2xl bg-cyan-400/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                              >
+                                Save structured set
+                              </button>
+                            </form>
+                          )}
+
+                          {currentMemberTwoTruthsEntry && (
+                            <article class="rounded-3xl border border-white/10 bg-white/6 p-5">
+                              <div class="flex items-start justify-between gap-4">
+                                <div>
+                                  <p class="text-xs font-semibold tracking-[0.18em] text-cyan-100/60 uppercase">
+                                    Your locked set
+                                  </p>
+                                  <h3 class="mt-2 text-xl font-semibold text-white">
+                                    {currentMemberTwoTruthsEntry.author.email}
+                                  </h3>
+                                </div>
+                                <p class="text-xs text-blue-100/45">
+                                  Saved {formatResultTime(currentMemberTwoTruthsEntry.createdAt)}
+                                </p>
+                              </div>
+                              <ol class="mt-4 space-y-3">
+                                {currentMemberTwoTruthsEntry.statements.map((statement, index) => (
+                                  <li class="rounded-2xl border border-white/10 bg-slate-950/25 px-4 py-3 text-sm leading-6 text-white">
+                                    <span class="mb-1 block text-xs font-semibold tracking-[0.18em] text-blue-100/50 uppercase">
+                                      {statementLabel(index + 1)}
+                                    </span>
+                                    {statement}
+                                  </li>
+                                ))}
+                              </ol>
+                            </article>
+                          )}
                         </div>
-                      ) : (
-                        <form method="POST" action="/api/games/two-truths-entry" class="space-y-5">
-                          <input type="hidden" name="teamId" value={gameState.teamId} />
-                          <input type="hidden" name="gameSlug" value={gameState.template.slug} />
-                          <input type="hidden" name="roundId" value={twoTruthsRound.round.id} />
-                          <div class="grid gap-4">
-                            <div>
-                              <label class="block text-sm font-medium text-blue-100/75" for="statement-one">
-                                Statement 1
-                              </label>
-                              <textarea
-                                id="statement-one"
-                                name="statementOne"
-                                rows="3"
-                                maxlength="200"
-                                required
-                                placeholder="Write a short statement..."
-                                class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
-                              >
-                                {twoTruthsStatementOneValue}
-                              </textarea>
-                            </div>
-                            <div>
-                              <label class="block text-sm font-medium text-blue-100/75" for="statement-two">
-                                Statement 2
-                              </label>
-                              <textarea
-                                id="statement-two"
-                                name="statementTwo"
-                                rows="3"
-                                maxlength="200"
-                                required
-                                placeholder="Write a short statement..."
-                                class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
-                              >
-                                {twoTruthsStatementTwoValue}
-                              </textarea>
-                            </div>
-                            <div>
-                              <label class="block text-sm font-medium text-blue-100/75" for="statement-three">
-                                Statement 3
-                              </label>
-                              <textarea
-                                id="statement-three"
-                                name="statementThree"
-                                rows="3"
-                                maxlength="200"
-                                required
-                                placeholder="Write a short statement..."
-                                class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
-                              >
-                                {twoTruthsStatementThreeValue}
-                              </textarea>
-                            </div>
+
+                        <aside class="space-y-4">
+                          <div class="rounded-3xl border border-white/10 bg-white/6 p-5">
+                            <p class="text-xs font-semibold tracking-[0.2em] text-blue-100/50 uppercase">
+                              Round progress
+                            </p>
+                            <p class="mt-2 text-4xl font-semibold text-white">{twoTruthsRound.entries.length}</p>
+                            <p class="mt-2 text-sm leading-6 text-blue-100/60">
+                              {twoTruthsRound.entries.length >= 2
+                                ? "Collection can close whenever the team is ready."
+                                : "You need at least two submitted sets before voting can begin."}
+                            </p>
+
+                            {twoTruthsRound.entries.length >= 2 ? (
+                              <form method="POST" action="/api/games/two-truths-close-collection" class="mt-5">
+                                <input type="hidden" name="teamId" value={gameState.teamId} />
+                                <input type="hidden" name="gameSlug" value={gameState.template.slug} />
+                                <input type="hidden" name="roundId" value={twoTruthsRound.round.id} />
+                                <button
+                                  type="submit"
+                                  class="w-full rounded-2xl bg-emerald-300/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200"
+                                >
+                                  Close collection and open voting
+                                </button>
+                              </form>
+                            ) : null}
                           </div>
 
-                          <fieldset>
-                            <legend class="text-sm font-medium text-blue-100/75">Which statement is the lie?</legend>
-                            <div class="mt-3 grid gap-3 sm:grid-cols-3">
-                              {[1, 2, 3].map((index) => (
-                                <label class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm">
-                                  <input
-                                    type="radio"
-                                    name="lieStatementIndex"
-                                    value={index}
-                                    checked={twoTruthsLieStatementIndexValue === String(index)}
-                                    class="h-4 w-4"
-                                  />
-                                  Statement {index}
-                                </label>
+                          <div class="rounded-3xl border border-white/10 bg-white/6 p-5">
+                            <p class="text-xs font-semibold tracking-[0.2em] text-blue-100/50 uppercase">
+                              Submitted authors
+                            </p>
+                            {twoTruthsRound.entries.length > 0 ? (
+                              <ul class="mt-4 space-y-3">
+                                {twoTruthsRound.entries.map((entry) => (
+                                  <li class="rounded-2xl border border-white/10 bg-slate-950/25 px-4 py-3 text-sm text-white">
+                                    {entry.author.email}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p class="mt-4 text-sm leading-6 text-blue-100/60">
+                                Nobody has submitted yet. The first set opens the round history window automatically.
+                              </p>
+                            )}
+                          </div>
+                        </aside>
+                      </div>
+                    ) : isTwoTruthsVoting ? (
+                      <div class="space-y-6">
+                        <div class="grid gap-4 lg:grid-cols-[1fr_0.8fr]">
+                          <div class="rounded-3xl border border-white/10 bg-white/6 p-5">
+                            <p class="text-xs font-semibold tracking-[0.18em] text-cyan-100/60 uppercase">
+                              Your voting status
+                            </p>
+                            {isCurrentMemberTwoTruthsParticipant ? (
+                              <>
+                                <h3 class="mt-2 text-2xl font-semibold text-white">
+                                  {currentMemberOutstandingVoteCount === 0
+                                    ? "You have voted on every teammate set"
+                                    : `${currentMemberOutstandingVoteCount} guess${currentMemberOutstandingVoteCount === 1 ? "" : "es"} left`}
+                                </h3>
+                                <p class="mt-3 text-sm leading-6 text-blue-100/65">
+                                  Your own set stays locked out of voting. Results remain hidden until the round closes.
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <h3 class="mt-2 text-2xl font-semibold text-white">You are watching this round</h3>
+                                <p class="mt-3 text-sm leading-6 text-blue-100/65">
+                                  Only teammates who submitted before collection closed vote in this round. You can
+                                  still follow reveal progress here.
+                                </p>
+                              </>
+                            )}
+                          </div>
+
+                          <div class="rounded-3xl border border-white/10 bg-white/6 p-5">
+                            <p class="text-xs font-semibold tracking-[0.18em] text-blue-100/50 uppercase">
+                              Team progress
+                            </p>
+                            <h3 class="mt-2 text-2xl font-semibold text-white">
+                              {twoTruthsRound.guessProgress.submittedGuessCount} of{" "}
+                              {twoTruthsRound.guessProgress.requiredTotalGuessCount}
+                            </h3>
+                            <p class="mt-3 text-sm leading-6 text-blue-100/65">
+                              {twoTruthsRound.guessProgress.allRequiredGuessesSubmitted
+                                ? "Every required guess is in. The next refresh will show reveal."
+                                : "The round reveals automatically when the last required guess is saved."}
+                            </p>
+                          </div>
+                        </div>
+
+                        {currentMemberTwoTruthsEntry && (
+                          <article class="rounded-3xl border border-white/10 bg-white/6 p-5">
+                            <p class="text-xs font-semibold tracking-[0.18em] text-emerald-100/70 uppercase">
+                              Your locked set
+                            </p>
+                            <h3 class="mt-2 text-xl font-semibold text-white">
+                              {currentMemberTwoTruthsEntry.author.email}
+                            </h3>
+                            <ol class="mt-4 grid gap-3 md:grid-cols-3">
+                              {currentMemberTwoTruthsEntry.statements.map((statement, index) => (
+                                <li class="rounded-2xl border border-white/10 bg-slate-950/25 px-4 py-3 text-sm leading-6 text-white">
+                                  <span class="mb-1 block text-xs font-semibold tracking-[0.18em] text-blue-100/50 uppercase">
+                                    {statementLabel(index + 1)}
+                                  </span>
+                                  {statement}
+                                </li>
+                              ))}
+                            </ol>
+                          </article>
+                        )}
+
+                        <div class="grid gap-4">
+                          {twoTruthsVoteTargets.map((entry) => {
+                            const existingGuess = currentMemberGuessesByTargetEntryId.get(entry.id);
+
+                            return (
+                              <article class="rounded-3xl border border-white/10 bg-white/6 p-5">
+                                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                  <div>
+                                    <p class="text-xs font-semibold tracking-[0.18em] text-cyan-100/60 uppercase">
+                                      Guess this set
+                                    </p>
+                                    <h3 class="mt-2 text-xl font-semibold text-white">{entry.author.email}</h3>
+                                  </div>
+                                  {existingGuess ? (
+                                    <div class="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-2 text-sm text-emerald-100">
+                                      Locked guess: {statementLabel(existingGuess.guessedLieIndex)}
+                                    </div>
+                                  ) : null}
+                                </div>
+
+                                <ol class="mt-4 grid gap-3 md:grid-cols-3">
+                                  {entry.statements.map((statement, index) => (
+                                    <li class="rounded-2xl border border-white/10 bg-slate-950/25 px-4 py-3 text-sm leading-6 text-white">
+                                      <span class="mb-1 block text-xs font-semibold tracking-[0.18em] text-blue-100/50 uppercase">
+                                        {statementLabel(index + 1)}
+                                      </span>
+                                      {statement}
+                                    </li>
+                                  ))}
+                                </ol>
+
+                                {isCurrentMemberTwoTruthsParticipant ? (
+                                  existingGuess ? null : (
+                                    <form method="POST" action="/api/games/two-truths-vote" class="mt-5 space-y-4">
+                                      <input type="hidden" name="teamId" value={gameState.teamId} />
+                                      <input type="hidden" name="gameSlug" value={gameState.template.slug} />
+                                      <input type="hidden" name="roundId" value={twoTruthsRound.round.id} />
+                                      <input type="hidden" name="targetEntryId" value={entry.id} />
+                                      <fieldset>
+                                        <legend class="text-sm font-medium text-blue-100/75">
+                                          Which statement do you think is the lie?
+                                        </legend>
+                                        <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                                          {[1, 2, 3].map((index) => (
+                                            <label class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm">
+                                              <input
+                                                type="radio"
+                                                name="guessedLieIndex"
+                                                value={index}
+                                                class="h-4 w-4"
+                                              />
+                                              {statementLabel(index)}
+                                            </label>
+                                          ))}
+                                        </div>
+                                      </fieldset>
+                                      <button
+                                        type="submit"
+                                        class="w-full rounded-2xl bg-cyan-400/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                                      >
+                                        Save guess
+                                      </button>
+                                    </form>
+                                  )
+                                ) : null}
+                              </article>
+                            );
+                          })}
+                        </div>
+
+                        {!twoTruthsRound.guessProgress.allRequiredGuessesSubmitted ? (
+                          <div class="rounded-3xl border border-amber-300/20 bg-amber-300/10 p-5">
+                            <p class="text-xs font-semibold tracking-[0.18em] text-amber-100/75 uppercase">
+                              Manual fallback
+                            </p>
+                            <h3 class="mt-2 text-2xl font-semibold text-white">Close voting early if needed</h3>
+                            <p class="mt-3 text-sm leading-6 text-amber-50/85">
+                              Missing guesses are ignored during scoring. Use this only if the team wants to finish the
+                              round without waiting for the last few votes.
+                            </p>
+                            <form method="POST" action="/api/games/two-truths-close-voting" class="mt-5">
+                              <input type="hidden" name="teamId" value={gameState.teamId} />
+                              <input type="hidden" name="gameSlug" value={gameState.template.slug} />
+                              <input type="hidden" name="roundId" value={twoTruthsRound.round.id} />
+                              <button
+                                type="submit"
+                                class="w-full rounded-2xl bg-amber-200/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-100"
+                              >
+                                Close voting and reveal recorded guesses
+                              </button>
+                            </form>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div class="space-y-6">
+                        {twoTruthsRound.revealSummary && (
+                          <section class="rounded-3xl border border-white/10 bg-white/6 p-5">
+                            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                              <div>
+                                <p class="text-xs font-semibold tracking-[0.18em] text-emerald-100/70 uppercase">
+                                  Round scoring
+                                </p>
+                                <h3 class="mt-2 text-2xl font-semibold text-white">
+                                  Correct guesses plus teammates fooled
+                                </h3>
+                              </div>
+                              <p class="text-sm text-blue-100/60">
+                                {twoTruthsRound.revealSummary.totalGuessesRecorded} recorded guess
+                                {twoTruthsRound.revealSummary.totalGuessesRecorded === 1 ? "" : "es"}
+                              </p>
+                            </div>
+
+                            <div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                              {twoTruthsRound.revealSummary.scores.map((score) => (
+                                <article class="rounded-3xl border border-white/10 bg-slate-950/25 p-4">
+                                  <p class="text-xs font-semibold tracking-[0.18em] text-cyan-100/60 uppercase">
+                                    {score.participant.email}
+                                  </p>
+                                  <p class="mt-2 text-4xl font-semibold text-white">{score.totalScore}</p>
+                                  <p class="mt-3 text-sm text-blue-100/65">
+                                    {score.correctGuessCount} correct guess{score.correctGuessCount === 1 ? "" : "es"}{" "}
+                                    and {score.fooledTeammateCount} teammate{score.fooledTeammateCount === 1 ? "" : "s"}{" "}
+                                    fooled
+                                  </p>
+                                </article>
                               ))}
                             </div>
-                          </fieldset>
+                          </section>
+                        )}
 
-                          <button
-                            type="submit"
-                            class="w-full rounded-2xl bg-cyan-400/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
-                          >
-                            Save structured set
-                          </button>
-                        </form>
-                      )
-                    ) : (
-                      <div class="rounded-3xl border border-white/10 bg-white/6 p-5 text-sm leading-6 text-blue-100/75">
-                        The collection, voting, and reveal contracts are ready in the service layer. The next phase
-                        replaces this placeholder with the full teammate voting experience.
+                        <div class="grid gap-4">
+                          {twoTruthsVotingEntries.map((entry) => {
+                            const entryGuesses = findGuessesForEntry(entry.id);
+                            const score = twoTruthsScoresByMembershipId.get(entry.author.membershipId);
+
+                            return (
+                              <article class="rounded-3xl border border-white/10 bg-white/6 p-5">
+                                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                  <div>
+                                    <p class="text-xs font-semibold tracking-[0.18em] text-cyan-100/60 uppercase">
+                                      Final reveal
+                                    </p>
+                                    <h3 class="mt-2 text-xl font-semibold text-white">{entry.author.email}</h3>
+                                    <p class="mt-2 text-sm text-blue-100/55">
+                                      Voting closed {formatDateTime(twoTruthsRound.structuredRound.votingClosedAt)}
+                                    </p>
+                                  </div>
+                                  {score ? (
+                                    <div class="rounded-3xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-right">
+                                      <p class="text-xs font-semibold tracking-[0.18em] text-emerald-100/70 uppercase">
+                                        Total score
+                                      </p>
+                                      <p class="mt-1 text-3xl font-semibold text-white">{score.totalScore}</p>
+                                    </div>
+                                  ) : null}
+                                </div>
+
+                                <ol class="mt-4 grid gap-3 md:grid-cols-3">
+                                  {entry.statements.map((statement, index) => {
+                                    const isLie = entry.lieStatementIndex === index + 1;
+
+                                    return (
+                                      <li
+                                        class:list={[
+                                          "rounded-2xl border px-4 py-3 text-sm leading-6",
+                                          isLie
+                                            ? "border-amber-300/30 bg-amber-300/10 text-amber-50"
+                                            : "border-white/10 bg-slate-950/25 text-white",
+                                        ]}
+                                      >
+                                        <span class="mb-1 block text-xs font-semibold tracking-[0.18em] uppercase">
+                                          {statementLabel(index + 1)}
+                                        </span>
+                                        <p>{statement}</p>
+                                        {isLie ? (
+                                          <p class="mt-3 text-xs font-semibold tracking-[0.16em] text-amber-100 uppercase">
+                                            This was the lie
+                                          </p>
+                                        ) : null}
+                                      </li>
+                                    );
+                                  })}
+                                </ol>
+
+                                <div class="mt-5 rounded-3xl border border-white/10 bg-slate-950/25 p-4">
+                                  <p class="text-xs font-semibold tracking-[0.18em] text-blue-100/50 uppercase">
+                                    Teammate guesses
+                                  </p>
+                                  {entryGuesses.length > 0 ? (
+                                    <ul class="mt-4 space-y-3">
+                                      {entryGuesses.map((guess) => (
+                                        <li class="flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                                          <div>
+                                            <p class="font-medium text-white">{guess.voter.email}</p>
+                                            <p class="text-blue-100/65">
+                                              Guessed {statementLabel(guess.guessedLieIndex)}
+                                            </p>
+                                          </div>
+                                          <span
+                                            class:list={[
+                                              "rounded-full px-3 py-1 text-xs font-semibold uppercase",
+                                              guessMatchesEntry(entry, guess)
+                                                ? "bg-emerald-300/15 text-emerald-100"
+                                                : "bg-amber-300/15 text-amber-100",
+                                            ]}
+                                          >
+                                            {guessMatchesEntry(entry, guess) ? "Correct guess" : "Author fooled them"}
+                                          </span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : (
+                                    <p class="mt-4 text-sm leading-6 text-blue-100/60">
+                                      No teammate guesses were recorded for this set before reveal.
+                                    </p>
+                                  )}
+                                </div>
+                              </article>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -369,9 +795,8 @@ function formatResultTime(createdAt: string) {
                             required
                             placeholder="Write your answer..."
                             class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
-                          >
-                            {responseTextareaValue}
-                          </textarea>
+                            set:text={responseTextareaValue}
+                          />
                           <p class="mt-2 text-xs leading-5 text-blue-100/50">Required. 500 characters max.</p>
                         </div>
                         <button

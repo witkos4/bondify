@@ -1,9 +1,9 @@
 ---
 change_id: S-09-two-truths-structured-round
 title: Structured Two Truths and a Lie round
-status: implementing
+status: implemented
 created: 2026-06-05
-updated: 2026-06-10
+updated: 2026-06-12
 archived_at: null
 ---
 
@@ -24,3 +24,5 @@ archived_at: null
   - no edits after submit
   - history keeps round summaries only
   - clean-break structured template rollout is allowed; legacy wish-based data can be removed if needed
+- Manual slice sweep on 2026-06-12 covered the core structured-round experience and confirmed the feature is implemented end-to-end at the main-flow level.
+- Remaining QA is now concentrated in edge cases: manual close with missing votes, summary history verification, and confirming the legacy wish-based template stays unreachable.

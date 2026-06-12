@@ -22,9 +22,11 @@ import type {
   ParticipantSafeHistoryEntry,
   ParticipantSafeRoundReveal,
   TeamGameState,
+  TeamDeleteResult,
   TeamHistoryClearResult,
   TeamHistoryEntryClearResult,
   TeamHistoryState,
+  TeamMemberRemoveResult,
   TeamManagementState,
   TeamInviteCreateResult,
   TeamInviteView,
@@ -78,6 +80,7 @@ interface TeamMembershipRow {
   team_id: string;
   profile_id: string;
   created_at: string;
+  removed_at: string | null;
 }
 
 interface TeamInviteRow {
@@ -235,6 +238,19 @@ interface HistoryClearRpcResult {
   cleared_at: string;
 }
 
+interface TeamMemberRemoveRpcResult {
+  team_id: string;
+  membership_id: string;
+  removed_profile_id: string;
+  removed_email: string;
+  removed_at: string;
+}
+
+interface TeamDeleteRpcResult {
+  deleted_team_id: string;
+  deleted_team_name: string;
+}
+
 const MAX_RESPONSE_TEXT_LENGTH = 500;
 const MAX_TWO_TRUTHS_STATEMENT_LENGTH = 200;
 const HISTORY_RETENTION_DAYS = 30;
@@ -299,7 +315,12 @@ function toMembership(row: TeamMembershipRow): BondifyTeamMembership {
     teamId: row.team_id,
     profileId: row.profile_id,
     createdAt: row.created_at,
+    removedAt: row.removed_at,
   };
+}
+
+function isActiveMembership(row: TeamMembershipRow): boolean {
+  return row.removed_at === null;
 }
 
 function toInvite(row: TeamInviteRow): BondifyTeamInvite {
@@ -505,11 +526,13 @@ function toParticipantSafeRoundReveal(row: GameRoundWithTemplateRow): Participan
 function toTeamHistoryState(input: {
   team: TeamRow;
   entries: ParticipantSafeHistoryEntry[];
+  emojiCheckInTimeline: EmojiCheckInTimelineEntry[];
   profileId: string;
 }): TeamHistoryState {
   return {
     team: toTeam(input.team),
     entries: input.entries,
+    emojiCheckInTimeline: input.emojiCheckInTimeline,
     canClearHistory: input.team.created_by === input.profileId,
   };
 }
@@ -519,9 +542,11 @@ function toTeamManagementState(input: {
   incomingInvites: TeamInviteView[];
   profileId: string;
 }): TeamManagementState {
+  const activeMemberships = input.row.team_memberships.filter(isActiveMembership);
+
   return {
     team: toTeam(input.row),
-    memberships: input.row.team_memberships.map(toTeamRosterEntry),
+    memberships: activeMemberships.map(toTeamRosterEntry),
     pendingInvites: input.row.team_invites.filter((invite) => invite.status === "pending").map(toTeamInviteView),
     incomingInvites: input.incomingInvites,
     canManageTeam: input.row.created_by === input.profileId,
@@ -655,9 +680,10 @@ async function requireMembershipAccess(
 ): Promise<TeamMembershipRow> {
   const { data: membership, error } = await supabase
     .from("team_memberships")
-    .select("id, team_id, profile_id, created_at")
+    .select("id, team_id, profile_id, created_at, removed_at")
     .eq("team_id", teamId)
     .eq("profile_id", profileId)
+    .is("removed_at", null)
     .maybeSingle();
 
   if (error) {
@@ -697,7 +723,7 @@ async function requireTeamOwnerAccess(
   const team = await getTeamForMember(supabase, input.teamId);
 
   if (team.created_by !== input.profileId) {
-    throw new BondifyServiceError("TEAM_OWNER_REQUIRED", "Only the team owner can clear team history.", {
+    throw new BondifyServiceError("TEAM_OWNER_REQUIRED", "Only the team owner can manage this team.", {
       teamId: input.teamId,
       profileId: input.profileId,
     });
@@ -842,10 +868,12 @@ function toTeamInviteView(row: TeamInviteWithAcceptedProfileRow): TeamInviteView
 }
 
 function toShellTeamOption(row: TeamSummaryRow): BondifyShellTeamOption {
+  const activeMemberships = row.team_memberships.filter(isActiveMembership);
+
   return {
     id: row.id,
     name: row.name,
-    memberCount: row.team_memberships.length,
+    memberCount: activeMemberships.length,
     pendingInviteCount: row.team_invites.filter((invite) => invite.status === "pending").length,
   };
 }
@@ -865,6 +893,7 @@ async function listTeamSummaryRows(supabase: SupabaseServerClient): Promise<Team
           team_id,
           profile_id,
           created_at,
+          removed_at,
           profile:profiles (
             id,
             email,
@@ -1654,7 +1683,7 @@ export function createBondifyServices(context: ServiceContext) {
 
         return rows.map((row) => ({
           team: toTeam(row),
-          memberships: row.team_memberships.map(toTeamRosterEntry),
+          memberships: row.team_memberships.filter(isActiveMembership).map(toTeamRosterEntry),
           pendingInvites: row.team_invites.filter((invite) => invite.status === "pending").map(toTeamInviteView),
         }));
       });
@@ -1698,6 +1727,97 @@ export function createBondifyServices(context: ServiceContext) {
       });
     },
 
+    async removeTeamMember(input: { teamId: string; membershipId: string }): Promise<TeamMemberRemoveResult> {
+      return withCurrentProfile(async (supabase, profile) => {
+        await requireTeamOwnerAccess(supabase, { teamId: input.teamId, profileId: profile.id });
+
+        const { data, error } = await supabase
+          .rpc("remove_team_member", {
+            team_uuid: input.teamId,
+            membership_uuid: input.membershipId,
+          })
+          .maybeSingle();
+
+        if (error) {
+          const normalizedMessage = error.message.toLowerCase();
+
+          if (normalizedMessage.includes("owner membership")) {
+            throw new BondifyServiceError(
+              "TEAM_OWNER_MEMBERSHIP_IMMUTABLE",
+              "The team owner cannot be removed from the roster.",
+              {
+                teamId: input.teamId,
+                membershipId: input.membershipId,
+              },
+            );
+          }
+
+          throw new BondifyServiceError("TEAM_MEMBER_NOT_FOUND", error.message, {
+            teamId: input.teamId,
+            membershipId: input.membershipId,
+          });
+        }
+
+        if (!data) {
+          throw new BondifyServiceError("TEAM_MEMBER_NOT_FOUND", "That team member could not be found.", {
+            teamId: input.teamId,
+            membershipId: input.membershipId,
+          });
+        }
+
+        const result = data as TeamMemberRemoveRpcResult;
+
+        return {
+          teamId: result.team_id,
+          membershipId: result.membership_id,
+          removedProfileId: result.removed_profile_id,
+          removedEmail: result.removed_email,
+          removedAt: result.removed_at,
+        };
+      });
+    },
+
+    async deleteOwnedTeam(input: { teamId: string; confirmationName: string }): Promise<TeamDeleteResult> {
+      return withCurrentProfile(async (supabase, profile) => {
+        const team = await requireTeamOwnerAccess(supabase, { teamId: input.teamId, profileId: profile.id });
+        const confirmationName = input.confirmationName.trim();
+
+        if (confirmationName !== team.name) {
+          throw new BondifyServiceError(
+            "DELETE_TEAM_CONFIRMATION_MISMATCH",
+            `Type "${team.name}" exactly to confirm team deletion.`,
+            {
+              teamId: input.teamId,
+            },
+          );
+        }
+
+        const teamRows = await listTeamSummaryRows(supabase);
+        const redirectTeamId = teamRows.find((row) => row.id !== input.teamId)?.id ?? null;
+        const { data, error } = await supabase.rpc("delete_owned_team", { team_uuid: input.teamId }).maybeSingle();
+
+        if (error) {
+          throw new BondifyServiceError("TEAM_NOT_FOUND", error.message, {
+            teamId: input.teamId,
+          });
+        }
+
+        if (!data) {
+          throw new BondifyServiceError("TEAM_NOT_FOUND", "That team could not be deleted.", {
+            teamId: input.teamId,
+          });
+        }
+
+        const result = data as TeamDeleteRpcResult;
+
+        return {
+          deletedTeamId: result.deleted_team_id,
+          deletedTeamName: result.deleted_team_name,
+          redirectTeamId,
+        };
+      });
+    },
+
     async createTeam(input: { name: string }): Promise<TeamSummary> {
       const name = input.name.trim();
       if (!name) {
@@ -1726,9 +1846,10 @@ export function createBondifyServices(context: ServiceContext) {
 
         const { data: membership, error: createdMembershipError } = await supabase
           .from("team_memberships")
-          .select("id, team_id, profile_id, created_at")
+          .select("id, team_id, profile_id, created_at, removed_at")
           .eq("team_id", teamId)
           .eq("profile_id", profile.id)
+          .is("removed_at", null)
           .single();
 
         if (createdMembershipError) {
@@ -1830,9 +1951,10 @@ export function createBondifyServices(context: ServiceContext) {
 
           const { data: existingMembership, error: membershipLookupError } = await supabase
             .from("team_memberships")
-            .select("id, profile:profiles!inner(normalized_email)")
+            .select("id, removed_at, profile:profiles!inner(normalized_email)")
             .eq("team_id", input.teamId)
             .eq("profile.normalized_email", normalizedEmail)
+            .is("removed_at", null)
             .limit(1);
 
           if (membershipLookupError) {
@@ -1984,9 +2106,10 @@ export function createBondifyServices(context: ServiceContext) {
 
         const { data: membership, error: createdMembershipError } = await supabase
           .from("team_memberships")
-          .select("id, team_id, profile_id, created_at")
+          .select("id, team_id, profile_id, created_at, removed_at")
           .eq("team_id", updatedInviteRow.team_id)
           .eq("profile_id", profile.id)
+          .is("removed_at", null)
           .single();
 
         if (createdMembershipError) {
@@ -2984,10 +3107,22 @@ export function createBondifyServices(context: ServiceContext) {
         await requireMembershipAccess(supabase, teamId, profile.id);
         const team = await getTeamForMember(supabase, teamId);
         const entries = await toParticipantSafeHistoryEntries(supabase, await listVisibleHistoryRows(supabase, teamId));
+        const emojiCheckInTimeline = (
+          await listEmojiCheckInTimelineRows(supabase, {
+            teamId,
+            days: EMOJI_CHECK_IN_TIMELINE_DAYS,
+          })
+        ).map((row) =>
+          toEmojiCheckInTimelineEntry({
+            session: row,
+            submissions: row.emoji_check_in_submissions,
+          }),
+        );
 
         return toTeamHistoryState({
           team,
           entries,
+          emojiCheckInTimeline,
           profileId: profile.id,
         });
       });

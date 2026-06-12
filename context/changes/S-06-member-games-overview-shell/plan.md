@@ -334,3 +334,8 @@ No database migration is required. The main compatibility change is behavioral: 
 - [x] 3.3 The game page and history page both show the authenticated top bar with the active team context — e3fe234
 - [x] 3.4 Switching teams from either authenticated team page returns to the selected-team dashboard in one action — e3fe234
 - [x] 3.5 The management link from authenticated pages lands in the dashboard management section until `S-08` replaces it — e3fe234
+
+### 2026-06-12 Verification Note
+
+- A manual regression sweep after `S-07` to `S-09` confirmed the `S-06` shell behaviors still hold.
+- No additional dedicated `S-06` testing remains open beyond ordinary future regression checks.

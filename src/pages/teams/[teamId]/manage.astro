@@ -1,8 +1,9 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import Topbar from "@/components/Topbar.astro";
+import { consumeDashboardFlash } from "@/lib/dashboard-flash";
 import { callBondifyService, createBondifyServices } from "@/lib/services/bondify";
-import type { TeamManagementState } from "@/types";
+import type { TeamInviteCreateResult, TeamInviteView, TeamManagementState } from "@/types";
 
 export const prerender = false;
 
@@ -20,6 +21,7 @@ const [shellContextResult, managementStateResult] = await Promise.all([
 
 const shell = shellContextResult.data;
 const managementState: TeamManagementState | null = managementStateResult.data;
+const dashboardFlash = consumeDashboardFlash(Astro.cookies);
 const errorMessage = managementStateResult.error?.message ?? null;
 const shouldRedirectToDashboard = shell !== null && shell.activeTeam === null;
 
@@ -29,6 +31,63 @@ if (shouldRedirectToDashboard) {
 }
 
 const pageTitle = managementState ? `${managementState.team.name} management | Bondify` : "Team management | Bondify";
+const inviteFlash =
+  dashboardFlash?.type === "invite-results" && dashboardFlash.teamId === decodedTeamId ? dashboardFlash : null;
+const inviteAcceptedFlash =
+  dashboardFlash?.type === "invite-accepted" && dashboardFlash.teamId === decodedTeamId ? dashboardFlash : null;
+const inviteAcceptErrorFlash =
+  dashboardFlash?.type === "invite-accept-error" && (!dashboardFlash.teamId || dashboardFlash.teamId === decodedTeamId)
+    ? dashboardFlash
+    : null;
+const teamCreatedFlash =
+  dashboardFlash?.type === "team-created" && dashboardFlash.teamId === decodedTeamId ? dashboardFlash : null;
+const teamCreateErrorFlash = dashboardFlash?.type === "team-create-error" ? dashboardFlash : null;
+const teamMemberRemovedFlash =
+  dashboardFlash?.type === "team-member-removed" && dashboardFlash.teamId === decodedTeamId ? dashboardFlash : null;
+const teamMemberRemoveErrorFlash =
+  dashboardFlash?.type === "team-member-remove-error" && dashboardFlash.teamId === decodedTeamId
+    ? dashboardFlash
+    : null;
+const teamDeletedFlash = dashboardFlash?.type === "team-deleted" ? dashboardFlash : null;
+const teamDeleteErrorFlash =
+  dashboardFlash?.type === "team-delete-error" && dashboardFlash.teamId === decodedTeamId ? dashboardFlash : null;
+const inviteTextareaValue = inviteFlash?.submittedEmails.join("\n") ?? "";
+const inviteResults: TeamInviteCreateResult[] = inviteFlash?.results ?? [];
+const inviteResultSuccessCount = inviteResults.filter((result) => result.ok).length;
+const inviteResultFailureCount = inviteResults.length - inviteResultSuccessCount;
+const createTeamInputValue = teamCreateErrorFlash?.teamName ?? "";
+const deleteTeamConfirmationValue = teamDeleteErrorFlash?.confirmationName ?? "";
+
+function formatInviteLabel(invite: TeamInviteView) {
+  return `Sent to ${invite.invite.email}. Accept it to add that team to your authenticated shell.`;
+}
+
+function formatInviteResultTitle(result: TeamInviteCreateResult) {
+  if (result.ok) {
+    return "Invite created";
+  }
+
+  switch (result.errorCode) {
+    case "ALREADY_TEAM_MEMBER":
+      return "Already a member";
+    case "SELF_INVITE":
+      return "This is your email";
+    case "DUPLICATE_INVITE":
+      return "Duplicate invite";
+    case "INVALID_INVITE_EMAIL":
+      return "Invalid email";
+    default:
+      return "Needs attention";
+  }
+}
+
+function formatMembershipDate(value: string) {
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+}
 ---
 
 <Layout title={pageTitle}>
@@ -40,15 +99,20 @@ const pageTitle = managementState ? `${managementState.team.name} management | B
         {
           shouldRedirectToDashboard ? null : managementState ? (
             <>
+              {teamDeletedFlash && (
+                <section class="rounded-[2rem] border border-emerald-300/25 bg-emerald-300/10 p-4 text-sm leading-6 text-emerald-100 shadow-xl shadow-black/20 backdrop-blur-xl">
+                  {teamDeletedFlash.message}
+                </section>
+              )}
+
               <section class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-8">
                 <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                   <div class="max-w-3xl">
                     <p class="text-xs font-semibold tracking-[0.28em] text-cyan-200/70 uppercase">Team management</p>
                     <h1 class="mt-3 text-4xl font-semibold text-white sm:text-5xl">{managementState.team.name}</h1>
                     <p class="mt-4 max-w-2xl text-base leading-7 text-blue-100/75">
-                      This is the new dedicated management surface for team setup, invites, roster review, and owner
-                      actions. Phase 1 establishes the route and shared shell contract before the full management UI
-                      lands.
+                      Team setup now lives on its own page. Invite teammates, review the roster, accept incoming
+                      invites, and use owner-only controls here without displacing the games-first dashboard.
                     </p>
                   </div>
 
@@ -61,45 +125,380 @@ const pageTitle = managementState ? `${managementState.team.name} management | B
                       {managementState.pendingInvites.length} pending invite
                       {managementState.pendingInvites.length === 1 ? "" : "s"}
                     </p>
+                    <p class="mt-1 text-sm text-blue-100/60">
+                      {managementState.incomingInvites.length} incoming invite
+                      {managementState.incomingInvites.length === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="mt-6 grid gap-4 md:grid-cols-2">
+                  <div class="rounded-3xl border border-white/10 bg-slate-950/25 p-4">
+                    <p class="text-xs font-semibold tracking-[0.2em] text-cyan-100/60 uppercase">Surface split</p>
+                    <p class="mt-2 text-sm leading-6 text-blue-100/65">
+                      The dashboard stays member-first around daily play. Everything about team setup now stays here.
+                    </p>
+                  </div>
+                  <div class="rounded-3xl border border-white/10 bg-slate-950/25 p-4">
+                    <p class="text-xs font-semibold tracking-[0.2em] text-cyan-100/60 uppercase">Access</p>
+                    <p class="mt-2 text-sm leading-6 text-blue-100/65">
+                      {managementState.canManageTeam
+                        ? "This account owns the selected team, so roster changes and team deletion controls are visible below."
+                        : "This account is an active member of the selected team. Owner-only controls stay hidden."}
+                    </p>
                   </div>
                 </div>
               </section>
 
-              <section class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-                <article class="rounded-[2rem] border border-white/12 bg-slate-950/35 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
-                  <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">What lands next</p>
-                  <h2 class="mt-2 text-3xl font-semibold">Existing management flows move here intact</h2>
-                  <ul class="mt-4 space-y-3 text-sm leading-6 text-blue-100/65">
-                    <li>Incoming invite acceptance moves here from the dashboard.</li>
-                    <li>Roster and pending invites become team-scoped management content.</li>
-                    <li>Batch teammate invites and create-another-team stay SSR form-backed.</li>
-                    <li>
-                      Owner-only member removal and delete-team actions arrive after the route contract is stable.
-                    </li>
+              <section
+                id="incoming-invites"
+                class="rounded-[2rem] border border-white/12 bg-slate-950/35 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8"
+              >
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div class="max-w-2xl">
+                    <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Incoming invites</p>
+                    <h2 class="mt-3 text-2xl font-semibold text-white">Other teams waiting for you</h2>
+                    <p class="mt-2 text-sm leading-6 text-blue-100/65">
+                      Invitations addressed to this account email now live on the management surface too. Accept one and
+                      Bondify will switch you straight into that team's shell context.
+                    </p>
+                  </div>
+
+                  <div class="rounded-3xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-blue-100/65">
+                    {managementState.incomingInvites.length} pending invite
+                    {managementState.incomingInvites.length === 1 ? "" : "s"}
+                  </div>
+                </div>
+
+                {inviteAcceptedFlash && (
+                  <div class="mt-5 rounded-3xl border border-emerald-300/25 bg-emerald-300/10 p-4 text-sm leading-6 text-emerald-100">
+                    {inviteAcceptedFlash.message}
+                  </div>
+                )}
+
+                {inviteAcceptErrorFlash && (
+                  <div class="mt-5 rounded-3xl border border-red-500/30 bg-red-900/40 p-4 text-sm leading-6 text-red-300">
+                    {inviteAcceptErrorFlash.message}
+                  </div>
+                )}
+
+                {managementState.incomingInvites.length > 0 ? (
+                  <ul class="mt-6 grid gap-3 md:grid-cols-2">
+                    {managementState.incomingInvites.map((invite) => (
+                      <li class="rounded-3xl border border-white/10 bg-white/6 p-4">
+                        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <p class="text-sm font-medium text-white">{invite.invite.email}</p>
+                            <p class="mt-1 text-sm text-blue-100/65">Status: {invite.invite.status}</p>
+                            <p class="mt-2 text-xs leading-5 text-blue-100/50">{formatInviteLabel(invite)}</p>
+                          </div>
+                          <form method="POST" action="/api/teams/accept-invite" class="sm:min-w-36">
+                            <input type="hidden" name="inviteId" value={invite.invite.id} />
+                            <input type="hidden" name="teamId" value={managementState.team.id} />
+                            <input type="hidden" name="surface" value="management" />
+                            <button
+                              type="submit"
+                              class="w-full rounded-2xl bg-emerald-300/90 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200"
+                            >
+                              Accept invite
+                            </button>
+                          </form>
+                        </div>
+                      </li>
+                    ))}
                   </ul>
-                </article>
+                ) : (
+                  <div class="mt-6 rounded-3xl border border-white/10 bg-white/6 p-4 text-sm leading-6 text-blue-100/65">
+                    No incoming invites are waiting on this account right now.
+                  </div>
+                )}
+              </section>
 
-                <article class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
-                  <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Access</p>
-                  <h2 class="mt-2 text-2xl font-semibold">Selected team access is already verified</h2>
-                  <p class="mt-3 text-sm leading-6 text-blue-100/65">
-                    You are inside the selected team's authenticated management surface. Team switching from the top bar
-                    now keeps you on management instead of sending you back to the games dashboard.
-                  </p>
-
-                  {managementState.canManageTeam ? (
-                    <div class="mt-5 rounded-3xl border border-emerald-300/25 bg-emerald-300/10 p-4 text-sm leading-6 text-emerald-100">
-                      This account currently owns the selected team, so owner-only controls will render here in the next
-                      phase.
+              <div class="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+                <section
+                  id="team-roster"
+                  class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8"
+                >
+                  <div class="flex items-end justify-between gap-4">
+                    <div>
+                      <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Roster</p>
+                      <h2 class="mt-2 text-3xl font-semibold">{managementState.team.name}</h2>
+                      <p class="mt-3 max-w-2xl text-sm leading-6 text-blue-100/65">
+                        Active members and pending invites stay together here so ownership and team state remain easy to
+                        read at a glance.
+                      </p>
                     </div>
-                  ) : (
-                    <div class="mt-5 rounded-3xl border border-white/10 bg-slate-950/25 p-4 text-sm leading-6 text-blue-100/65">
-                      This account is an active member of the selected team. Owner-only controls stay hidden for
-                      non-owner members.
+                    <div class="rounded-3xl border border-white/10 bg-slate-950/35 px-4 py-3 text-sm text-blue-100/65">
+                      {managementState.memberships.length} active member
+                      {managementState.memberships.length === 1 ? "" : "s"}
+                    </div>
+                  </div>
+
+                  {teamMemberRemovedFlash && (
+                    <div class="mt-5 rounded-3xl border border-emerald-300/25 bg-emerald-300/10 p-4 text-sm leading-6 text-emerald-100">
+                      {teamMemberRemovedFlash.message}
                     </div>
                   )}
-                </article>
-              </section>
+
+                  {teamMemberRemoveErrorFlash && (
+                    <div class="mt-5 rounded-3xl border border-red-500/30 bg-red-900/40 p-4 text-sm leading-6 text-red-300">
+                      {teamMemberRemoveErrorFlash.message}
+                    </div>
+                  )}
+
+                  <div class="mt-8 grid gap-4">
+                    {managementState.memberships.map((entry) => {
+                      const isOwner = entry.profile.id === managementState.team.createdBy;
+
+                      return (
+                        <article class="rounded-3xl border border-white/10 bg-slate-950/25 px-5 py-4">
+                          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <p class="text-lg font-medium text-white">{entry.profile.email}</p>
+                              <p class="mt-1 text-sm text-blue-100/55">
+                                Member since {formatMembershipDate(entry.membership.createdAt)}
+                              </p>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-3">
+                              <span
+                                class:list={[
+                                  "inline-flex rounded-full px-3 py-1 text-xs font-semibold tracking-[0.2em] uppercase",
+                                  isOwner
+                                    ? "border border-amber-300/30 bg-amber-300/10 text-amber-100"
+                                    : "border border-emerald-300/25 bg-emerald-300/10 text-emerald-100",
+                                ]}
+                              >
+                                {isOwner ? "Team owner" : "Active member"}
+                              </span>
+
+                              {managementState.canManageTeam && !isOwner && (
+                                <form method="POST" action="/api/teams/remove-member">
+                                  <input type="hidden" name="teamId" value={managementState.team.id} />
+                                  <input type="hidden" name="membershipId" value={entry.membership.id} />
+                                  <input type="hidden" name="surface" value="management" />
+                                  <button
+                                    type="submit"
+                                    class="rounded-2xl border border-red-300/30 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/10"
+                                  >
+                                    Remove member
+                                  </button>
+                                </form>
+                              )}
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+
+                    {managementState.pendingInvites.length > 0 && (
+                      <>
+                        <div class="pt-4">
+                          <p class="text-xs font-semibold tracking-[0.2em] text-cyan-100/60 uppercase">
+                            Pending invites
+                          </p>
+                        </div>
+
+                        {managementState.pendingInvites.map((invite) => (
+                          <article class="rounded-3xl border border-dashed border-cyan-200/20 bg-cyan-200/6 px-5 py-4">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <p class="text-lg font-medium text-white">{invite.invite.email}</p>
+                                <p class="mt-1 text-sm text-blue-100/55">Invite pending for this team</p>
+                              </div>
+                              <span class="inline-flex rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1 text-xs font-semibold tracking-[0.2em] text-cyan-100 uppercase">
+                                Pending invite
+                              </span>
+                            </div>
+                          </article>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                </section>
+
+                <div class="space-y-6">
+                  <section class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
+                    <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Invite teammates</p>
+                    <h2 class="mt-2 text-2xl font-semibold">Bring the team together</h2>
+                    <p class="mt-3 text-sm leading-6 text-blue-100/65">
+                      Any active member of this team can invite several teammates at once. Valid rows succeed even if
+                      some others still need correction.
+                    </p>
+
+                    <form method="POST" action="/api/teams/invite" class="mt-5 space-y-4">
+                      <input type="hidden" name="teamId" value={managementState.team.id} />
+                      <input type="hidden" name="surface" value="management" />
+                      <div>
+                        <label class="block text-sm font-medium text-blue-100/75" for="invite-emails">
+                          Emails
+                        </label>
+                        <textarea
+                          id="invite-emails"
+                          name="emails"
+                          rows="6"
+                          placeholder={`alex@example.com\njamie@example.com\npat@example.com`}
+                          class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
+                          set:text={inviteTextareaValue}
+                        />
+                        <p class="mt-2 text-xs leading-5 text-blue-100/50">
+                          Add one email per line. Commas work too if you prefer pasting from a list.
+                        </p>
+                      </div>
+                      <button
+                        type="submit"
+                        class="w-full rounded-2xl bg-cyan-400/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                      >
+                        Send invites
+                      </button>
+                    </form>
+
+                    {inviteFlash && (
+                      <div class="mt-5 rounded-3xl border border-white/10 bg-white/5 p-4">
+                        <p class="text-sm font-semibold text-white">{inviteFlash.message}</p>
+                        <p class="mt-1 text-xs text-blue-100/55">
+                          {inviteResultSuccessCount} created
+                          {" · "}
+                          {inviteResultFailureCount} need attention
+                        </p>
+
+                        {inviteResults.length > 0 ? (
+                          <div class="mt-4 space-y-3">
+                            {inviteResults.map((result) => (
+                              <div
+                                class:list={[
+                                  "rounded-2xl border px-4 py-3 text-sm",
+                                  result.ok
+                                    ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100"
+                                    : "border-red-500/30 bg-red-900/40 text-red-200",
+                                ]}
+                              >
+                                <div class="flex items-start justify-between gap-3">
+                                  <div>
+                                    <p class="font-semibold">{result.email}</p>
+                                    <p class="mt-1 text-xs opacity-80">{formatInviteResultTitle(result)}</p>
+                                  </div>
+                                  <span class="text-xs font-semibold tracking-[0.2em] uppercase">
+                                    {result.ok ? "Created" : "Fix needed"}
+                                  </span>
+                                </div>
+                                {!result.ok && result.errorMessage && (
+                                  <p class="mt-2 text-xs leading-5 opacity-90">{result.errorMessage}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p class="mt-4 text-sm text-red-200/80">{inviteFlash.message}</p>
+                        )}
+                      </div>
+                    )}
+                  </section>
+
+                  <section
+                    id="create-team-next"
+                    class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8"
+                  >
+                    <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">
+                      Create another team
+                    </p>
+                    <h2 class="mt-2 text-2xl font-semibold">Start a new team from the same shell</h2>
+                    <p class="mt-3 text-sm leading-6 text-blue-100/65">
+                      Multi-team support is already live, so another group created here appears in the team switcher
+                      immediately.
+                    </p>
+
+                    {teamCreatedFlash && (
+                      <div class="mt-5 rounded-3xl border border-emerald-300/25 bg-emerald-300/10 p-4 text-sm leading-6 text-emerald-100">
+                        {teamCreatedFlash.message}
+                      </div>
+                    )}
+
+                    {teamCreateErrorFlash && (
+                      <div class="mt-5 rounded-3xl border border-red-500/30 bg-red-900/40 p-4 text-sm leading-6 text-red-300">
+                        {teamCreateErrorFlash.message}
+                      </div>
+                    )}
+
+                    <form method="POST" action="/api/teams/create" class="mt-5 space-y-4">
+                      <input type="hidden" name="teamId" value={managementState.team.id} />
+                      <input type="hidden" name="surface" value="management" />
+                      <div>
+                        <label class="block text-sm font-medium text-blue-100/75" for="team-name">
+                          Team name
+                        </label>
+                        <input
+                          id="team-name"
+                          name="teamName"
+                          type="text"
+                          value={createTeamInputValue}
+                          placeholder="Remote Icebreakers"
+                          class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        class="w-full rounded-2xl border border-cyan-300/25 bg-cyan-400/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                      >
+                        Create another team
+                      </button>
+                    </form>
+                  </section>
+
+                  {managementState.canManageTeam ? (
+                    <section
+                      id="danger-zone"
+                      class="rounded-[2rem] border border-red-500/25 bg-red-950/30 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8"
+                    >
+                      <p class="text-xs font-semibold tracking-[0.25em] text-red-200/70 uppercase">Danger zone</p>
+                      <h2 class="mt-2 text-2xl font-semibold">Delete this team</h2>
+                      <p class="mt-3 text-sm leading-6 text-red-100/75">
+                        This permanently removes the team and its dependent records. Type the exact team name to confirm
+                        before deleting it.
+                      </p>
+
+                      {teamDeleteErrorFlash && (
+                        <div class="mt-5 rounded-3xl border border-red-300/30 bg-red-900/40 p-4 text-sm leading-6 text-red-100">
+                          {teamDeleteErrorFlash.message}
+                        </div>
+                      )}
+
+                      <form method="POST" action="/api/teams/delete-team" class="mt-5 space-y-4">
+                        <input type="hidden" name="teamId" value={managementState.team.id} />
+                        <input type="hidden" name="surface" value="management" />
+                        <div>
+                          <label class="block text-sm font-medium text-red-100/85" for="confirmation-name">
+                            Type <span class="font-semibold">{managementState.team.name}</span>
+                          </label>
+                          <input
+                            id="confirmation-name"
+                            name="confirmationName"
+                            type="text"
+                            value={deleteTeamConfirmationValue}
+                            placeholder={managementState.team.name}
+                            class="mt-2 w-full rounded-2xl border border-red-200/20 bg-slate-950/40 px-4 py-3 text-white transition outline-none focus:border-red-300/60"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          class="w-full rounded-2xl border border-red-300/30 bg-red-500/80 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-500"
+                        >
+                          Delete team
+                        </button>
+                      </form>
+                    </section>
+                  ) : (
+                    <section class="rounded-[2rem] border border-white/12 bg-white/6 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
+                      <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Owner controls</p>
+                      <h2 class="mt-2 text-2xl font-semibold">This page still works for non-owner members</h2>
+                      <p class="mt-3 text-sm leading-6 text-blue-100/65">
+                        You can invite teammates and review the roster here, but member removal and team deletion stay
+                        reserved for the team owner.
+                      </p>
+                    </section>
+                  )}
+                </div>
+              </div>
             </>
           ) : (
             <section class="rounded-[2rem] border border-red-500/25 bg-red-950/45 p-6 text-red-100 shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">

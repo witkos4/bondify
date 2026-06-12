@@ -17,6 +17,7 @@ function readStringField(form: FormData, key: string): string {
 export const POST: APIRoute = async (context) => {
   const form = await context.request.formData();
   const returnSurface = parseTeamSurface(form.get("surface"));
+  const fallbackTeamId = readStringField(form, "teamId");
 
   if (returnSurface === null) {
     setDashboardFlash(context.cookies, {
@@ -24,6 +25,7 @@ export const POST: APIRoute = async (context) => {
       inviteId: readStringField(form, "inviteId"),
       message: "Choose a valid return surface before accepting an invite.",
       surface: "dashboard",
+      teamId: fallbackTeamId || undefined,
     });
     return context.redirect("/dashboard");
   }
@@ -33,6 +35,11 @@ export const POST: APIRoute = async (context) => {
   });
 
   const fallbackInviteId = readStringField(form, "inviteId");
+  const fallbackRedirectTarget = getTeamSurfaceHref({
+    surface: returnSurface,
+    teamId: fallbackTeamId || null,
+    hash: "incoming-invites",
+  });
 
   if (!parsed.success) {
     setDashboardFlash(context.cookies, {
@@ -40,8 +47,9 @@ export const POST: APIRoute = async (context) => {
       inviteId: fallbackInviteId,
       message: parsed.error.issues[0]?.message ?? "Choose a valid invite before accepting.",
       surface: returnSurface,
+      teamId: fallbackTeamId || undefined,
     });
-    return context.redirect(getTeamSurfaceHref({ surface: returnSurface }));
+    return context.redirect(fallbackRedirectTarget);
   }
 
   const services = createBondifyServices({
@@ -66,7 +74,8 @@ export const POST: APIRoute = async (context) => {
       inviteId: parsed.data.inviteId,
       message,
       surface: returnSurface,
+      teamId: fallbackTeamId || undefined,
     });
-    return context.redirect(getTeamSurfaceHref({ surface: returnSurface }));
+    return context.redirect(fallbackRedirectTarget);
   }
 };

@@ -303,9 +303,9 @@ Add the missing destructive management actions safely by soft-deactivating membe
 
 #### Automated
 
-- [ ] 2.1 `npm run lint` passes for the management page, dashboard extraction, and updated API-route redirects
-- [ ] 2.2 `npm run build` passes with the dashboard content move and form-route contract changes
-- [ ] 2.3 Invalid management form payloads and invalid return modes fail safely without open redirects or unhandled exceptions
+- [x] 2.1 `npm run lint` passes for the management page, dashboard extraction, and updated API-route redirects
+- [x] 2.2 `npm run build` passes with the dashboard content move and form-route contract changes
+- [x] 2.3 Invalid management form payloads and invalid return modes fail safely without open redirects or unhandled exceptions
 
 #### Manual
 
@@ -317,13 +317,19 @@ Add the missing destructive management actions safely by soft-deactivating membe
 
 #### Automated
 
-- [ ] 3.1 The new Supabase migrations apply cleanly and leave existing team, history, and Emoji Check-In tables readable to current code
-- [ ] 3.2 `npm run lint` passes for the new migrations, service methods, owner-only routes, and management page updates
-- [ ] 3.3 `npm run build` passes with soft-membership semantics and destructive-action flows wired in
 - [ ] 3.4 Invalid membership IDs, owner-self-removal attempts, and bad delete confirmations return controlled domain errors instead of partial deletes
+- [x] 3.1 The new Supabase migrations apply cleanly and leave existing team, history, and Emoji Check-In tables readable to current code
+- [x] 3.2 `npm run lint` passes for the new migrations, service methods, owner-only routes, and management page updates
+- [x] 3.3 `npm run build` passes with soft-membership semantics and destructive-action flows wired in
 
 #### Manual
 
 - [ ] 3.5 Non-owner members can view the management page but do not see remove-member or delete-team controls and cannot force those actions through direct POST requests
 - [ ] 3.6 Removing a non-owner member removes that person from the active roster and team access immediately without deleting prior revealed/history content for remaining members
 - [ ] 3.7 Deleting a team removes it from the switcher and redirects the owner to another surviving team’s management page or `/dashboard` when no teams remain
+
+### 2026-06-12 Verification Note
+
+- Manual testing confirmed the management-page split is working at the main-flow level and surfaced one real regression: `create another team` initially failed because of a team-membership insert policy mismatch.
+- That RLS issue was fixed the same day by restoring the helper-backed insert policy for active memberships.
+- Remaining recommended checks are the destructive owner-only scenarios plus a final no-membership redirect check.

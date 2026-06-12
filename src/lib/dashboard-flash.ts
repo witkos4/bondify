@@ -41,6 +41,36 @@ type DashboardFlash =
       teamId?: string;
     }
   | {
+      type: "team-member-removed";
+      teamId: string;
+      membershipId: string;
+      removedEmail: string;
+      message: string;
+      surface?: TeamSurface;
+    }
+  | {
+      type: "team-member-remove-error";
+      teamId: string;
+      membershipId?: string;
+      message: string;
+      surface?: TeamSurface;
+    }
+  | {
+      type: "team-deleted";
+      deletedTeamId: string;
+      deletedTeamName: string;
+      redirectTeamId: string | null;
+      message: string;
+      surface?: TeamSurface;
+    }
+  | {
+      type: "team-delete-error";
+      teamId: string;
+      confirmationName: string;
+      message: string;
+      surface?: TeamSurface;
+    }
+  | {
       type: "emoji-check-in-submitted";
       teamId: string;
       sessionId: string;

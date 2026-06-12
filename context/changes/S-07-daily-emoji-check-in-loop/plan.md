@@ -515,3 +515,9 @@ The slice can stay SSR-first because the target is small teams and low daily tra
 - [ ] 4.6 The 30-day timeline uses only post-migration daily Emoji Check-In sessions
 - [ ] 4.7 The old generic round flow continues working for the non-emoji games
 - [ ] 4.8 Seed data is verified separately from schema state if the dashboard initially looks empty
+
+### 2026-06-12 Verification Note
+
+- Manual product testing and live polish were completed on the inline dashboard ritual, the anonymous pre-reveal state, the linked-games visibility, the preview/history split, and the broader Emoji Check-In presentation.
+- Additional seeded history was added for the `BUBBA` team to make the 30-day history view inspectable during local QA.
+- Remaining recommended checks are narrow: try an intentional duplicate submission to confirm the user-facing error path, confirm the zero-submission reveal guard, and do one regression pass on a non-emoji linked game.

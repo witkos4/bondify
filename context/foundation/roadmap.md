@@ -3,7 +3,7 @@ project: Bondify
 version: 2
 status: draft
 created: 2026-06-05
-updated: 2026-06-05
+updated: 2026-06-12
 prd_version: 2
 main_goal: speed
 top_blocker: decisions
@@ -29,10 +29,10 @@ The main product bet in this revision is that a cleaner member-first shell plus 
 
 | ID | Change ID | Outcome (user can ...) | Prerequisites | PRD refs | Status |
 |---|---|---|---|---|---|
-| S-06 | member-games-overview-shell | User can land directly in the selected team games overview, see the signed-in shell, and switch teams in one action. | - | US-01 | ready |
-| S-07 | daily-emoji-check-in-loop | User can enter today's Emoji Check-In, submit emoji-only reactions once, see the reveal, and compare the last 30 days. | S-06 | US-02 | proposed |
-| S-08 | team-management-page-separation | User can leave the member-first games overview and reach team-management actions on their own dedicated page. | S-06 | US-01 | proposed |
-| S-09 | two-truths-structured-round | User can join a structured Two Truths and a Lie round with teammate voting and no self-guessing. | S-06 | US-03 | blocked |
+| S-06 | member-games-overview-shell | User can land directly in the selected team games overview, see the signed-in shell, and switch teams in one action. | - | US-01 | implemented |
+| S-07 | daily-emoji-check-in-loop | User can enter today's Emoji Check-In, submit emoji-only reactions once, see the reveal, and compare the last 30 days. | S-06 | US-02 | implemented |
+| S-08 | team-management-page-separation | User can leave the member-first games overview and reach team-management actions on their own dedicated page. | S-06 | US-01 | implemented |
+| S-09 | two-truths-structured-round | User can join a structured Two Truths and a Lie round with teammate voting and no self-guessing. | S-06 | US-03 | implemented |
 
 ## Streams
 
@@ -72,7 +72,8 @@ No dedicated foundations are required for this roadmap. The brownfield baseline 
 - **Blockers:** -
 - **Unknowns:** -
 - **Risk:** This comes first because every later revision assumes the product already lands the member in the right team context; delaying it would force deeper game work onto the wrong shell.
-- **Status:** ready
+- **Status:** implemented
+- **2026-06-12 verification note:** The member shell, direct authenticated landing, and one-action team switching were manually rechecked during the wider slice sweep and remain stable.
 
 ### S-07: Daily Emoji Check-In ritual
 
@@ -84,7 +85,8 @@ No dedicated foundations are required for this roadmap. The brownfield baseline 
 - **Blockers:** -
 - **Unknowns:** -
 - **Risk:** This is the first full proof that the revised product creates a repeatable team ritual instead of only cleaning up navigation, so it should follow the shell immediately.
-- **Status:** proposed
+- **Status:** implemented
+- **2026-06-12 verification note:** The dashboard Emoji Check-In flow, preview/history split, picker expansion, and whitespace/polish fixes were manually exercised and refined with live user feedback.
 
 ### S-08: Team-management page separation
 
@@ -96,7 +98,9 @@ No dedicated foundations are required for this roadmap. The brownfield baseline 
 - **Blockers:** -
 - **Unknowns:** -
 - **Risk:** This stays behind the member shell because separating owner actions is valuable, but it should not delay the core member entry and daily game path.
-- **Status:** proposed
+- **UX note from manual testing (2026-06-12):** The extra management entry point low on the dashboard feels redundant because team management is already reachable from the top bar. If the card starts feeling noisy, prefer trimming or removing the duplicate CTA instead of adding more management affordances to the games-first surface.
+- **Status:** implemented
+- **2026-06-12 verification note:** Core management navigation and non-destructive flows were manually exercised. The create-another-team RLS regression discovered during testing was fixed the same day.
 
 ### S-09: Structured Two Truths and a Lie round
 
@@ -106,13 +110,10 @@ No dedicated foundations are required for this roadmap. The brownfield baseline 
 - **Prerequisites:** S-06
 - **Parallel with:** S-07, S-08
 - **Blockers:** -
-- **Unknowns:**
-  - How should Two Truths and a Lie scoring work? - Owner: user. Block: yes.
-  - Are Two Truths and a Lie guesses anonymous or visible? - Owner: user. Block: yes.
-  - When should Two Truths and a Lie results be revealed: immediately or only after all votes? - Owner: user. Block: yes.
-  - Should Two Truths and a Lie run as a daily ritual, an on-demand game, or a session-based activity? - Owner: user. Block: yes.
-- **Risk:** This slice is intentionally blocked because the unresolved game rules would otherwise force churn in both the interaction model and the stored round data.
-- **Status:** blocked
+- **Unknowns:** -
+- **Risk:** The main residual risk is now edge-case QA around partial voting, legacy-template reachability, and summary history, rather than product-definition uncertainty.
+- **Status:** implemented
+- **2026-06-12 verification note:** The structured round is implemented and the core flow was included in the manual slice sweep after the planning decisions were locked.
 
 ## Backlog Handoff
 
@@ -142,3 +143,8 @@ No dedicated foundations are required for this roadmap. The brownfield baseline 
 - **Finalizing all Two Truths and a Lie rules inside this roadmap pass** - Why parked: the PRD keeps scoring, anonymity, reveal timing, and cadence open for later clarification.
 
 ## Done
+
+- **2026-06-12 - S-06 validated:** Authenticated shell routing, team context, and shared topbar flow remain working after the later slice changes.
+- **2026-06-12 - S-07 validated and polished:** Emoji Check-In dashboard flow was manually exercised, whitespace issues were removed, the preview/history split was refined, the picker was expanded to 25 options, and seeded history was added for the `BUBBA` team.
+- **2026-06-12 - S-08 validated and fixed:** Dedicated team management flow was manually exercised; the `create another team` RLS regression was found and fixed, and invite-field whitespace was removed.
+- **2026-06-12 - S-09 validated at core-flow level:** Structured Two Truths and a Lie flow is implemented and included in the manual sweep, with a few edge-case QA checks still worth running before treating the slice as fully hardened.

@@ -57,6 +57,14 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
+function formatSessionDate(value: string) {
+  return new Intl.DateTimeFormat("en", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(`${value}T00:00:00Z`));
+}
+
 function groupHistoryEntries(entries: ParticipantSafeHistoryEntry[]): HistoryGroup[] {
   const groups = new Map<string, HistoryGroup>();
 
@@ -79,8 +87,14 @@ function groupHistoryEntries(entries: ParticipantSafeHistoryEntry[]): HistoryGro
   return Array.from(groups.values());
 }
 
+function statementLabel(index: number) {
+  return `Statement ${index}`;
+}
+
 const historyGroups = historyState ? groupHistoryEntries(historyState.entries) : [];
-const hasHistory = historyGroups.length > 0;
+const emojiTimeline = historyState?.emojiCheckInTimeline ?? [];
+const hasEmojiHistory = emojiTimeline.length > 0;
+const hasLinkedGameHistory = historyGroups.length > 0;
 ---
 
 <Layout title={pageTitle}>
@@ -105,14 +119,14 @@ const hasHistory = historyGroups.length > 0;
                     >
                       Back to dashboard
                     </a>
-                    {historyState.canClearHistory && hasHistory && (
+                    {historyState.canClearHistory && hasLinkedGameHistory && (
                       <form method="POST" action="/api/teams/clear-history">
                         <input type="hidden" name="teamId" value={historyState.team.id} />
                         <button
                           type="submit"
                           class="w-full rounded-2xl border border-red-300/25 bg-red-400/15 px-4 py-3 text-sm font-semibold text-red-100 transition hover:bg-red-400/25 sm:w-auto"
                         >
-                          Clear all
+                          Clear linked game history
                         </button>
                       </form>
                     )}
@@ -133,7 +147,53 @@ const hasHistory = historyGroups.length > 0;
                 )}
               </section>
 
-              {hasHistory ? (
+              {hasEmojiHistory && (
+                <section class="space-y-4 rounded-[2rem] border border-white/12 bg-slate-950/35 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
+                  <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div>
+                      <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">
+                        Emoji Check-In history
+                      </p>
+                      <h2 class="mt-2 text-3xl font-semibold">30-day mood line</h2>
+                      <p class="mt-3 max-w-2xl text-sm leading-6 text-blue-100/65">
+                        Revealed days only. This keeps the daily signal together in one place while the dashboard stays
+                        focused on the latest three check-ins.
+                      </p>
+                    </div>
+                    <div class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-blue-100/60">
+                      {emojiTimeline.length} revealed day{emojiTimeline.length === 1 ? "" : "s"}
+                    </div>
+                  </div>
+
+                  <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {emojiTimeline.map((entry) => (
+                      <article class="rounded-3xl border border-white/10 bg-white/6 p-4">
+                        <div class="flex items-start justify-between gap-4">
+                          <div>
+                            <p class="text-xs font-semibold tracking-[0.18em] text-cyan-100/60 uppercase">
+                              {formatSessionDate(entry.session.sessionDate)}
+                            </p>
+                            <p class="mt-2 text-sm text-blue-100/60">
+                              {entry.submittedCount} teammate{entry.submittedCount === 1 ? "" : "s"} checked in
+                            </p>
+                          </div>
+                        </div>
+
+                        <div class="mt-4 flex flex-wrap gap-2">
+                          {entry.emojiCounts.map((count) => (
+                            <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/35 px-3 py-2 text-sm text-white">
+                              <span class="text-xl">{count.emoji}</span>
+                              <span class="text-blue-100/70">x{count.count}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {hasLinkedGameHistory ? (
                 historyGroups.map((group) => (
                   <section class="space-y-4 rounded-[2rem] border border-white/12 bg-slate-950/35 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -155,8 +215,9 @@ const hasHistory = historyGroups.length > 0;
                                 Revealed {formatDateTime(entry.round.revealedAt)}
                               </p>
                               <h3 class="mt-2 text-xl font-semibold text-white">
-                                {entry.responses.length} anonymous response
-                                {entry.responses.length === 1 ? "" : "s"}
+                                {entry.twoTruthsSummary
+                                  ? `${entry.twoTruthsSummary.entries.length} structured set${entry.twoTruthsSummary.entries.length === 1 ? "" : "s"}`
+                                  : `${entry.responses.length} anonymous response${entry.responses.length === 1 ? "" : "s"}`}
                               </h3>
                               {entry.round.historyVisibleUntil && (
                                 <p class="mt-2 text-xs text-blue-100/45">
@@ -179,23 +240,79 @@ const hasHistory = historyGroups.length > 0;
                             )}
                           </div>
 
-                          <div class="mt-5 grid gap-3 md:grid-cols-2">
-                            {entry.responses.map((response, index) => (
-                              <div class="rounded-2xl border border-white/10 bg-slate-950/25 p-4">
-                                <div class="flex items-start justify-between gap-3">
-                                  <p class="text-xs font-semibold tracking-[0.18em] text-cyan-100/60 uppercase">
-                                    Response {index + 1}
+                          {entry.twoTruthsSummary ? (
+                            <div class="mt-5 space-y-5">
+                              <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                                {entry.twoTruthsSummary.revealSummary.scores.map((score) => (
+                                  <article class="rounded-3xl border border-white/10 bg-slate-950/25 p-4">
+                                    <p class="text-xs font-semibold tracking-[0.18em] text-cyan-100/60 uppercase">
+                                      {score.participant.email}
+                                    </p>
+                                    <p class="mt-2 text-3xl font-semibold text-white">{score.totalScore}</p>
+                                    <p class="mt-3 text-sm leading-6 text-blue-100/65">
+                                      {score.correctGuessCount} correct guess{score.correctGuessCount === 1 ? "" : "es"}{" "}
+                                      and {score.fooledTeammateCount} teammate
+                                      {score.fooledTeammateCount === 1 ? "" : "s"} fooled
+                                    </p>
+                                  </article>
+                                ))}
+                              </section>
+
+                              <section class="grid gap-4">
+                                {entry.twoTruthsSummary.entries.map((structuredEntry) => (
+                                  <article class="rounded-3xl border border-white/10 bg-slate-950/25 p-4">
+                                    <p class="text-xs font-semibold tracking-[0.18em] text-amber-100/70 uppercase">
+                                      {structuredEntry.author.email}
+                                    </p>
+                                    <ol class="mt-4 grid gap-3 md:grid-cols-3">
+                                      {structuredEntry.statements.map((statement, index) => {
+                                        const isLie = structuredEntry.lieStatementIndex === index + 1;
+
+                                        return (
+                                          <li
+                                            class:list={[
+                                              "rounded-2xl border px-4 py-3 text-sm leading-6",
+                                              isLie
+                                                ? "border-amber-300/30 bg-amber-300/10 text-amber-50"
+                                                : "border-white/10 bg-white/6 text-white",
+                                            ]}
+                                          >
+                                            <span class="mb-1 block text-xs font-semibold tracking-[0.18em] uppercase">
+                                              {statementLabel(index + 1)}
+                                            </span>
+                                            <p>{statement}</p>
+                                            {isLie ? (
+                                              <p class="mt-3 text-xs font-semibold tracking-[0.16em] text-amber-100 uppercase">
+                                                Lie
+                                              </p>
+                                            ) : null}
+                                          </li>
+                                        );
+                                      })}
+                                    </ol>
+                                  </article>
+                                ))}
+                              </section>
+                            </div>
+                          ) : (
+                            <div class="mt-5 grid gap-3 md:grid-cols-2">
+                              {entry.responses.map((response, index) => (
+                                <div class="rounded-2xl border border-white/10 bg-slate-950/25 p-4">
+                                  <div class="flex items-start justify-between gap-3">
+                                    <p class="text-xs font-semibold tracking-[0.18em] text-cyan-100/60 uppercase">
+                                      Response {index + 1}
+                                    </p>
+                                    <time class="text-xs text-blue-100/45" datetime={response.createdAt}>
+                                      {formatDateTime(response.createdAt)}
+                                    </time>
+                                  </div>
+                                  <p class="mt-3 text-sm leading-6 whitespace-pre-wrap text-white">
+                                    {response.responseText}
                                   </p>
-                                  <time class="text-xs text-blue-100/45" datetime={response.createdAt}>
-                                    {formatDateTime(response.createdAt)}
-                                  </time>
                                 </div>
-                                <p class="mt-3 text-sm leading-6 whitespace-pre-wrap text-white">
-                                  {response.responseText}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
+                              ))}
+                            </div>
+                          )}
                         </article>
                       ))}
                     </div>

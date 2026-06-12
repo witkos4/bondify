@@ -5,12 +5,10 @@ import { setGameFlash } from "@/lib/game-flash";
 
 export const prerender = false;
 
-const voteSchema = z.object({
-  teamId: z.uuid("Choose a valid team before submitting a guess."),
-  gameSlug: z.string().trim().min(1, "Choose a valid game before submitting a guess."),
-  roundId: z.uuid("Choose an active structured round before submitting a guess."),
-  targetEntryId: z.uuid("Choose a valid teammate entry before submitting a guess."),
-  guessedLieIndex: z.coerce.number().int("Choose which statement you think is the lie."),
+const closeVotingSchema = z.object({
+  teamId: z.uuid("Choose a valid team before closing voting."),
+  gameSlug: z.string().trim().min(1, "Choose a valid game before closing voting."),
+  roundId: z.uuid("Choose an active structured round before closing voting."),
 });
 
 function readStringField(form: FormData, key: string): string {
@@ -24,12 +22,10 @@ function gamePath(teamId: string, gameSlug: string): string {
 
 export const POST: APIRoute = async (context) => {
   const form = await context.request.formData();
-  const parsed = voteSchema.safeParse({
+  const parsed = closeVotingSchema.safeParse({
     teamId: form.get("teamId"),
     gameSlug: form.get("gameSlug"),
     roundId: form.get("roundId"),
-    targetEntryId: form.get("targetEntryId"),
-    guessedLieIndex: form.get("guessedLieIndex"),
   });
 
   const fallbackTeamId = readStringField(form, "teamId");
@@ -41,7 +37,7 @@ export const POST: APIRoute = async (context) => {
       type: "two-truths-vote-error",
       teamId: fallbackTeamId,
       gameSlug: fallbackGameSlug,
-      message: parsed.error.issues[0]?.message ?? "Choose a valid teammate entry before submitting a guess.",
+      message: parsed.error.issues[0]?.message ?? "Choose a valid structured round before closing voting.",
     });
     return context.redirect(fallbackPath);
   }
@@ -52,24 +48,20 @@ export const POST: APIRoute = async (context) => {
   });
 
   try {
-    const state = await services.submitTwoTruthsGuess({
+    await services.closeTwoTruthsVoting({
       roundId: parsed.data.roundId,
-      targetEntryId: parsed.data.targetEntryId,
-      guessedLieIndex: parsed.data.guessedLieIndex,
     });
 
     setGameFlash(context.cookies, {
-      type: "two-truths-vote-submitted",
+      type: "two-truths-voting-closed",
       teamId: parsed.data.teamId,
       gameSlug: parsed.data.gameSlug,
-      message:
-        state.structuredRound.phase === "revealed"
-          ? "Your guess is saved. The round is now revealed."
-          : "Your guess is saved.",
+      message: "Voting is closed. Reveal is ready.",
     });
     return context.redirect(gamePath(parsed.data.teamId, parsed.data.gameSlug));
   } catch (error) {
-    const message = error instanceof BondifyServiceError ? error.message : "We couldn't save your guess right now.";
+    const message =
+      error instanceof BondifyServiceError ? error.message : "We couldn't close voting for this structured round.";
 
     setGameFlash(context.cookies, {
       type: "two-truths-vote-error",

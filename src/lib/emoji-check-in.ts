@@ -28,6 +28,15 @@ export const EMOJI_CHECK_IN_OPTIONS: EmojiCheckInOption[] = [
   { emoji: "🌧️", label: "Heavy", description: "The emotional weather feels weighty." },
   { emoji: "🔥", label: "Stretched", description: "The team is under heat or high load." },
   { emoji: "❤️", label: "Cared for", description: "Support and appreciation are showing up." },
+  { emoji: "💡", label: "Inspired", description: "New ideas are sparking." },
+  { emoji: "🫶", label: "Supported", description: "People feel backed up and seen." },
+  { emoji: "🌊", label: "Flowing", description: "Work feels smooth and natural." },
+  { emoji: "⚡", label: "Energized", description: "The pace feels lively and strong." },
+  { emoji: "🧩", label: "Figuring it out", description: "Things are still coming together." },
+  { emoji: "😵‍💫", label: "Swamped", description: "The day feels overloaded or chaotic." },
+  { emoji: "🛟", label: "Need support", description: "Extra help would make a difference." },
+  { emoji: "🎉", label: "Proud", description: "The team is feeling a real win." },
+  { emoji: "🧘", label: "Centered", description: "The team feels present, balanced, and grounded." },
 ];
 
 const VALID_EMOJI_CHECK_IN_EMOJIS = new Set(EMOJI_CHECK_IN_OPTIONS.map((option) => option.emoji));

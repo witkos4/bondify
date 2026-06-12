@@ -17,6 +17,7 @@ function readStringField(form: FormData, key: string): string {
 export const POST: APIRoute = async (context) => {
   const form = await context.request.formData();
   const returnSurface = parseTeamSurface(form.get("surface"));
+  const fallbackTeamId = readStringField(form, "teamId");
 
   if (returnSurface === null) {
     setDashboardFlash(context.cookies, {
@@ -24,6 +25,7 @@ export const POST: APIRoute = async (context) => {
       teamName: readStringField(form, "teamName").trim(),
       message: "Choose a valid return surface before creating a team.",
       surface: "dashboard",
+      teamId: fallbackTeamId || undefined,
     });
     return context.redirect("/dashboard");
   }
@@ -39,8 +41,11 @@ export const POST: APIRoute = async (context) => {
       teamName: submittedTeamName,
       message: parsed.error.issues[0]?.message ?? "Team name is required.",
       surface: returnSurface,
+      teamId: fallbackTeamId || undefined,
     });
-    return context.redirect(getTeamSurfaceHref({ surface: returnSurface, hash: "create-team-next" }));
+    return context.redirect(
+      getTeamSurfaceHref({ surface: returnSurface, teamId: fallbackTeamId || null, hash: "create-team-next" }),
+    );
   }
 
   const services = createBondifyServices({
@@ -66,7 +71,10 @@ export const POST: APIRoute = async (context) => {
       teamName: parsed.data.teamName,
       message,
       surface: returnSurface,
+      teamId: fallbackTeamId || undefined,
     });
-    return context.redirect(getTeamSurfaceHref({ surface: returnSurface, hash: "create-team-next" }));
+    return context.redirect(
+      getTeamSurfaceHref({ surface: returnSurface, teamId: fallbackTeamId || null, hash: "create-team-next" }),
+    );
   }
 };
