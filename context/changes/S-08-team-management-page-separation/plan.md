@@ -295,9 +295,9 @@ Add the missing destructive management actions safely by soft-deactivating membe
 
 #### Manual
 
-- [ ] 1.4 Visiting `/teams/<teamId>/manage` as an active member loads the authenticated shell and selected-team context successfully
-- [ ] 1.5 Switching teams from the management page keeps the user on the management page for the newly selected team
-- [ ] 1.6 A signed-in user with no active team memberships who opens the management route is redirected to `/dashboard`
+- [x] 1.4 Visiting `/teams/<teamId>/manage` as an active member loads the authenticated shell and selected-team context successfully
+- [x] 1.5 Switching teams from the management page keeps the user on the management page for the newly selected team
+- [x] 1.6 A signed-in user with no active team memberships who opens the management route is redirected to `/dashboard`
 
 ### Phase 2: Move Existing Management Flows Out Of The Dashboard
 
@@ -309,27 +309,34 @@ Add the missing destructive management actions safely by soft-deactivating membe
 
 #### Manual
 
-- [ ] 2.4 The authenticated team dashboard no longer renders the large management forms or invite panels and instead shows a lightweight management entry point
-- [ ] 2.5 The management page shows personal incoming invites, team roster, pending invites, batch invite UI, and create-another-team UI
-- [ ] 2.6 Submitting invite, create-team, and accept-invite flows from the management page returns the user to management with the correct flash state and selected-team context
+- [x] 2.4 The authenticated team dashboard no longer renders the large management forms or invite panels and instead shows a lightweight management entry point
+- [x] 2.5 The management page shows personal incoming invites, team roster, pending invites, batch invite UI, and create-another-team UI
+- [x] 2.6 Submitting invite, create-team, and accept-invite flows from the management page returns the user to management with the correct flash state and selected-team context
 
 ### Phase 3: Owner-Only Member Removal And Team Deletion
 
 #### Automated
 
-- [ ] 3.4 Invalid membership IDs, owner-self-removal attempts, and bad delete confirmations return controlled domain errors instead of partial deletes
+- [x] 3.4 Invalid membership IDs, owner-self-removal attempts, and bad delete confirmations return controlled domain errors instead of partial deletes
 - [x] 3.1 The new Supabase migrations apply cleanly and leave existing team, history, and Emoji Check-In tables readable to current code
 - [x] 3.2 `npm run lint` passes for the new migrations, service methods, owner-only routes, and management page updates
 - [x] 3.3 `npm run build` passes with soft-membership semantics and destructive-action flows wired in
 
 #### Manual
 
-- [ ] 3.5 Non-owner members can view the management page but do not see remove-member or delete-team controls and cannot force those actions through direct POST requests
-- [ ] 3.6 Removing a non-owner member removes that person from the active roster and team access immediately without deleting prior revealed/history content for remaining members
-- [ ] 3.7 Deleting a team removes it from the switcher and redirects the owner to another surviving team’s management page or `/dashboard` when no teams remain
+- [x] 3.5 Non-owner members can view the management page but do not see remove-member or delete-team controls and cannot force those actions through direct POST requests
+- [x] 3.6 Removing a non-owner member removes that person from the active roster and team access immediately without deleting prior revealed/history content for remaining members
+- [x] 3.7 Deleting a team removes it from the switcher and redirects the owner to another surviving team’s management page or `/dashboard` when no teams remain
 
 ### 2026-06-12 Verification Note
 
 - Manual testing confirmed the management-page split is working at the main-flow level and surfaced one real regression: `create another team` initially failed because of a team-membership insert policy mismatch.
 - That RLS issue was fixed the same day by restoring the helper-backed insert policy for active memberships.
 - Remaining recommended checks are the destructive owner-only scenarios plus a final no-membership redirect check.
+
+### 2026-06-13 Verification Note
+
+- Confirmed on the live local stack that active-member management loads, the management switcher keeps `/teams/<id>/manage`, and a no-membership account is redirected back to the authenticated dashboard empty state.
+- Confirmed the management-surface form flows end to end: create-team, invite, and accept-invite all returned to management with the expected selected-team context.
+- Found and fixed one real blocker while closing the destructive-flow checks: `remove_team_member` was failing with an ambiguous `team_id` reference inside the owner-action RPC. The forward migration `20260613093000_fix_remove_team_member_rpc_ambiguity.sql` resolves that defect.
+- After the RPC fix landed locally, confirmed non-owner direct POSTs have no effect, owner removal soft-deactivates the membership while preserving structured history, and owner delete-team redirects back into another surviving management context.

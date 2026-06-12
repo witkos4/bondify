@@ -364,10 +364,10 @@ Finish the user-visible experience with a clear reveal, summary-only history int
 
 #### Manual
 
-- [ ] 1.5 The old wish-based template is no longer presented as if it were still the supported game
-- [ ] 1.6 Starting the new template creates a collection-phase round instead of the old free-text flow
-- [ ] 1.7 Submitting a structured entry persists the three statements and lie position correctly
-- [ ] 1.8 A participant cannot submit a second entry or edit the first one after submission
+- [x] 1.5 The old wish-based template is no longer presented as if it were still the supported game
+- [x] 1.6 Starting the new template creates a collection-phase round instead of the old free-text flow
+- [x] 1.7 Submitting a structured entry persists the three statements and lie position correctly
+- [x] 1.8 A participant cannot submit a second entry or edit the first one after submission
 
 ### Phase 2: Structured Submission And Voting Experience
 
@@ -379,11 +379,11 @@ Finish the user-visible experience with a clear reveal, summary-only history int
 
 #### Manual
 
-- [ ] 2.4 A participant can submit one structured entry during collection and then sees a locked waiting state
-- [ ] 2.5 Closing collection moves the round into voting using only submitted entries
-- [ ] 2.6 During voting, authored entries are visible but guess results remain hidden
-- [ ] 2.7 A participant cannot vote on their own entry and cannot vote twice on the same teammate entry
-- [ ] 2.8 When every required guess is submitted, the round auto-closes into final reveal
+- [x] 2.4 A participant can submit one structured entry during collection and then sees a locked waiting state
+- [x] 2.5 Closing collection moves the round into voting using only submitted entries
+- [x] 2.6 During voting, authored entries are visible but guess results remain hidden
+- [x] 2.7 A participant cannot vote on their own entry and cannot vote twice on the same teammate entry
+- [x] 2.8 When every required guess is submitted, the round auto-closes into final reveal
 
 ### Phase 3: Final Reveal, Summary History, And Clean-Break Rollout
 
@@ -395,13 +395,19 @@ Finish the user-visible experience with a clear reveal, summary-only history int
 
 #### Manual
 
-- [ ] 3.4 Final reveal shows truths, lies, guesses, and lightweight scores clearly
-- [ ] 3.5 Guess outcomes remain hidden until reveal and do not leak during voting
-- [ ] 3.6 Manually closing an incomplete voting round reveals only recorded guesses and excludes missing votes from scoring
-- [ ] 3.7 A revealed structured round appears in team history as a summary entry
-- [ ] 3.8 The old wish-based template is no longer reachable through normal game selection
+- [x] 3.4 Final reveal shows truths, lies, guesses, and lightweight scores clearly
+- [x] 3.5 Guess outcomes remain hidden until reveal and do not leak during voting
+- [x] 3.6 Manually closing an incomplete voting round reveals only recorded guesses and excludes missing votes from scoring
+- [x] 3.7 A revealed structured round appears in team history as a summary entry
+- [x] 3.8 The old wish-based template is no longer reachable through normal game selection
 
 ### 2026-06-12 Verification Note
 
 - The slice is implemented and was included in the manual cross-slice sweep after the structured rules were finalized.
 - Core-path confidence is now good enough to treat the feature as landed, but the remaining high-value checks are still the edge cases listed above: incomplete-vote manual close, history-summary rendering, and legacy-template reachability.
+
+### 2026-06-13 Verification Note
+
+- Re-ran the full local structured-round flow with the dedicated `S09 Full Verify 1d1f2fbb` users: fresh round start, structured entry save, duplicate-entry rejection, collection close, voting visibility rules, self-guess rejection, auto-close reveal, and history-summary rendering.
+- Confirmed duplicate-vote protection at the data boundary by verifying the guess count stays unchanged on a repeated vote attempt for the same target entry.
+- Confirmed the manual-close fallback on a second round: only the recorded guess was revealed and scored, and the resulting round summary appeared in team history.

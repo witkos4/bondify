@@ -466,9 +466,9 @@ The slice can stay SSR-first because the target is small teams and low daily tra
 
 #### Manual
 
-- [ ] 1.4 The local database contains at most one Emoji Check-In session per team per day
-- [ ] 1.5 The local database rejects a second submission from the same membership for the same daily session
-- [ ] 1.6 The seed exposes an `emoji-check-in` catalog entry without mixing old generic rows into the new timeline source
+- [x] 1.4 The local database contains at most one Emoji Check-In session per team per day
+- [x] 1.5 The local database rejects a second submission from the same membership for the same daily session
+- [x] 1.6 The seed exposes an `emoji-check-in` catalog entry without mixing old generic rows into the new timeline source
 
 ### Phase 2: Service and Route Contracts
 
@@ -480,10 +480,10 @@ The slice can stay SSR-first because the target is small teams and low daily tra
 
 #### Manual
 
-- [ ] 2.4 Opening `/dashboard?team=<id>` for a valid member loads or creates today's Emoji Check-In session successfully
-- [ ] 2.5 A member can submit 1 to 3 emojis once and gets a friendly duplicate-submission error on a second attempt
-- [ ] 2.6 Revealing a session with zero submissions is blocked with a friendly error
-- [ ] 2.7 Navigating to the old generic route for `emoji-check-in` does not leave the user in a second competing completion flow
+- [x] 2.4 Opening `/dashboard?team=<id>` for a valid member loads or creates today's Emoji Check-In session successfully
+- [x] 2.5 A member can submit 1 to 3 emojis once and gets a friendly duplicate-submission error on a second attempt
+- [x] 2.6 Revealing a session with zero submissions is blocked with a friendly error
+- [x] 2.7 Navigating to the old generic route for `emoji-check-in` does not leave the user in a second competing completion flow
 
 ### Phase 3: Dashboard Ritual UI
 
@@ -494,10 +494,10 @@ The slice can stay SSR-first because the target is small teams and low daily tra
 
 #### Manual
 
-- [ ] 3.3 A member can complete today's Emoji Check-In from `/dashboard?team=<id>` without navigating to a dedicated page
-- [ ] 3.4 Before reveal, the dashboard shows anonymous submitted count only
+- [x] 3.3 A member can complete today's Emoji Check-In from `/dashboard?team=<id>` without navigating to a dedicated page
+- [x] 3.4 Before reveal, the dashboard shows anonymous submitted count only
 - [ ] 3.5 After reveal, the dashboard shows a visible reveal transition and then a stable aggregated result state
-- [ ] 3.6 The dashboard still shows the rest of the game catalog as accessible linked entries
+- [x] 3.6 The dashboard still shows the rest of the game catalog as accessible linked entries
 - [ ] 3.7 The dashboard shows a readable 30-day timeline for the selected team
 
 ### Phase 4: Compatibility, Cleanup, and Verification
@@ -510,14 +510,21 @@ The slice can stay SSR-first because the target is small teams and low daily tra
 
 #### Manual
 
-- [ ] 4.4 The selected-team dashboard shows today's Emoji Check-In inline and still exposes the other games as links
+- [x] 4.4 The selected-team dashboard shows today's Emoji Check-In inline and still exposes the other games as links
 - [ ] 4.5 A member can submit 1 to 3 emojis once, see anonymous progress, reveal manually, and then see the result transition
-- [ ] 4.6 The 30-day timeline uses only post-migration daily Emoji Check-In sessions
-- [ ] 4.7 The old generic round flow continues working for the non-emoji games
-- [ ] 4.8 Seed data is verified separately from schema state if the dashboard initially looks empty
+- [x] 4.6 The 30-day timeline uses only post-migration daily Emoji Check-In sessions
+- [x] 4.7 The old generic round flow continues working for the non-emoji games
+- [x] 4.8 Seed data is verified separately from schema state if the dashboard initially looks empty
 
 ### 2026-06-12 Verification Note
 
 - Manual product testing and live polish were completed on the inline dashboard ritual, the anonymous pre-reveal state, the linked-games visibility, the preview/history split, and the broader Emoji Check-In presentation.
 - Additional seeded history was added for the `BUBBA` team to make the 30-day history view inspectable during local QA.
 - Remaining recommended checks are narrow: try an intentional duplicate submission to confirm the user-facing error path, confirm the zero-submission reveal guard, and do one regression pass on a non-emoji linked game.
+
+### 2026-06-13 Verification Note
+
+- Confirmed on the live local stack that dashboard load is idempotent for the team/day session key, duplicate same-member submission is blocked, zero-submission reveal is blocked, the old `emoji-check-in` route hands off to `/dashboard`, and non-emoji linked games still follow the generic page-based flow.
+- Confirmed the clean-break data contract directly from local state: `emoji-check-in` exists in the template seed, and no generic `game_rounds` rows exist for that slug, so the timeline is sourced only from dedicated Emoji Check-In sessions.
+- Left `3.5` / `4.5` open because this pass was HTTP- and database-driven, not browser-visual enough to re-confirm the reveal animation itself.
+- Left `3.7` open because the shipped UI now shows a 3-day dashboard preview plus the full 30-day history surface, so the original "30-day timeline on the dashboard" checkbox no longer matches the implemented split.

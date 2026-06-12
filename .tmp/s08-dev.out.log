@@ -56,3 +56,256 @@ Error: Failed to load url astro:server-app.js (resolved id: astro:server-app.js)
 [vite] program reload
 [vite] program reload
 [vite] program reload
+[2m00:22:47[22m [34m[200][39m / [2m48ms[22m
+[2m00:25:09[22m [33m[403][39m [33mPOST[39m /api/auth/signin [2m1ms[22m
+[2m00:25:09[22m [33m[302][39m /dashboard [2m1ms[22m
+[2m00:25:09[22m [34m[200][39m /auth/signin [2m40ms[22m
+[2m00:25:17[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m162ms[22m
+[2m00:25:18[22m [34m[200][39m /dashboard [2m376ms[22m
+[2m00:25:18[22m [34m[200][39m /dashboard [2m310ms[22m
+[2m00:25:26[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m131ms[22m
+[2m00:25:26[22m [34m[200][39m /dashboard [2m354ms[22m
+[2m00:25:26[22m [34m[200][39m /dashboard [2m290ms[22m
+[2m00:29:01[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m118ms[22m
+[2m00:29:01[22m [34m[200][39m /dashboard [2m348ms[22m
+[2m00:29:01[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m136ms[22m
+[2m00:29:02[22m [34m[200][39m /dashboard [2m328ms[22m
+[2m00:29:02[22m [34m[200][39m /dashboard [2m276ms[22m
+[2m00:29:02[22m [33m[302][39m [33mPOST[39m /api/games/start [2m218ms[22m
+[2m00:29:03[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m193ms[22m
+[2m00:29:03[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-entry [2m88ms[22m
+[2m00:29:03[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m167ms[22m
+[2m00:29:03[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-entry [2m59ms[22m
+[2m00:29:03[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m159ms[22m
+[2m00:29:03[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-entry [2m52ms[22m
+[2m00:29:04[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m164ms[22m
+[2m00:29:04[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-close-collection [2m57ms[22m
+[2m00:29:04[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m174ms[22m
+[2m00:29:04[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-vote [2m63ms[22m
+[2m00:29:04[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m171ms[22m
+[2m00:29:04[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-vote [2m59ms[22m
+[2m00:29:05[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m194ms[22m
+[2m00:29:05[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-vote [2m69ms[22m
+[2m00:29:05[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m202ms[22m
+[2m00:29:05[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-vote [2m62ms[22m
+[2m00:29:05[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m175ms[22m
+[2m00:29:05[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/history [2m194ms[22m
+[2m00:29:05[22m [33m[302][39m [33mPOST[39m /api/games/start [2m142ms[22m
+[2m00:29:06[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m184ms[22m
+[2m00:29:06[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-entry [2m80ms[22m
+[2m00:29:06[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m205ms[22m
+[2m00:29:06[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-entry [2m70ms[22m
+[2m00:29:06[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m190ms[22m
+[2m00:29:06[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-close-collection [2m67ms[22m
+[2m00:29:07[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m172ms[22m
+[2m00:29:07[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-vote [2m60ms[22m
+[2m00:29:07[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m153ms[22m
+[2m00:29:07[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-close-voting [2m60ms[22m
+[2m00:29:07[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m160ms[22m
+[2m00:29:07[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/history [2m170ms[22m
+[2m00:30:09[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m121ms[22m
+[2m00:30:10[22m [34m[200][39m /dashboard [2m363ms[22m
+[2m00:30:10[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m118ms[22m
+[2m00:30:10[22m [34m[200][39m /dashboard [2m309ms[22m
+[2m00:30:10[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m173ms[22m
+[2m00:30:11[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-entry [2m240ms[22m
+[2m00:30:11[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m174ms[22m
+[2m00:30:11[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-entry [2m151ms[22m
+[2m00:30:11[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m163ms[22m
+[2m00:30:11[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-entry [2m175ms[22m
+[2m00:30:11[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m160ms[22m
+[2m00:30:12[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-close-collection [2m162ms[22m
+[2m00:30:12[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m164ms[22m
+[2m00:30:12[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-vote [2m150ms[22m
+[2m00:30:12[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m205ms[22m
+[2m00:30:12[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-vote [2m167ms[22m
+[2m00:30:13[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m160ms[22m
+[2m00:30:13[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-vote [2m134ms[22m
+[2m00:30:13[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m179ms[22m
+[2m00:30:13[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-vote [2m202ms[22m
+[2m00:30:13[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m162ms[22m
+[2m00:30:13[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/history [2m163ms[22m
+[2m00:30:58[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m124ms[22m
+[2m00:30:58[22m [34m[200][39m /dashboard [2m355ms[22m
+[2m00:30:58[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m115ms[22m
+[2m00:30:59[22m [34m[200][39m /dashboard [2m296ms[22m
+[2m00:30:59[22m [33m[302][39m [33mPOST[39m /api/games/start [2m231ms[22m
+[2m00:30:59[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m165ms[22m
+[2m00:30:59[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-entry [2m185ms[22m
+[2m00:31:00[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m169ms[22m
+[2m00:31:00[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-entry [2m177ms[22m
+[2m00:31:00[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m166ms[22m
+[2m00:31:00[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-close-collection [2m170ms[22m
+[2m00:31:00[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m168ms[22m
+[2m00:31:01[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-vote [2m200ms[22m
+[2m00:31:01[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m168ms[22m
+[2m00:31:01[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-vote [2m143ms[22m
+[2m00:31:02[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m158ms[22m
+[2m00:31:02[22m [33m[302][39m [33mPOST[39m /api/games/two-truths-close-voting [2m154ms[22m
+[2m00:31:02[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/games/two-truths-and-a-lie [2m180ms[22m
+[2m00:31:02[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/history [2m172ms[22m
+[2m00:32:06[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m142ms[22m
+[2m00:32:06[22m [34m[200][39m /dashboard [2m367ms[22m
+[2m00:32:06[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m118ms[22m
+[2m00:32:07[22m [34m[200][39m /dashboard [2m311ms[22m
+[2m00:32:07[22m [34m[200][39m /dashboard [2m278ms[22m
+[2m00:32:08[22m [34m[200][39m /dashboard [2m294ms[22m
+[2m00:32:08[22m [33m[302][39m [33mPOST[39m /api/games/emoji-check-in/submit [2m147ms[22m
+[2m00:32:08[22m [34m[200][39m /dashboard [2m258ms[22m
+[2m00:32:08[22m [33m[302][39m [33mPOST[39m /api/games/emoji-check-in/submit [2m139ms[22m
+[2m00:32:09[22m [34m[200][39m /dashboard [2m270ms[22m
+[2m00:32:09[22m [33m[302][39m [33mPOST[39m /api/games/emoji-check-in/reveal [2m141ms[22m
+[2m00:32:09[22m [34m[200][39m /dashboard [2m263ms[22m
+[2m00:32:10[22m [34m[200][39m /dashboard [2m248ms[22m
+[2m00:32:10[22m [33m[302][39m [33mPOST[39m /api/games/emoji-check-in/reveal [2m119ms[22m
+[2m00:32:10[22m [34m[200][39m /dashboard [2m263ms[22m
+[2m00:32:10[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/games/emoji-check-in [2m137ms[22m
+[2m00:32:10[22m [33m[302][39m [33mPOST[39m /api/games/start [2m164ms[22m
+[2m00:32:10[22m [34m[200][39m /teams/f3350b1d-d36c-4613-960e-90363e76f631/games/rose-thorn-bud [2m156ms[22m
+[2m00:34:31[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m123ms[22m
+[2m00:34:31[22m [34m[200][39m /dashboard [2m337ms[22m
+[2m00:34:32[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m117ms[22m
+[2m00:34:32[22m [34m[200][39m /dashboard [2m323ms[22m
+[2m00:34:32[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m121ms[22m
+[2m00:34:32[22m [34m[200][39m /dashboard [2m290ms[22m
+[2m00:34:33[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m155ms[22m
+[2m00:34:33[22m [34m[200][39m /dashboard [2m211ms[22m
+[2m00:34:33[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m108ms[22m
+[2m00:34:33[22m [34m[200][39m /dashboard [2m267ms[22m
+[2m00:34:33[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m103ms[22m
+[2m00:34:34[22m [34m[200][39m /dashboard [2m304ms[22m
+[2m00:34:34[22m [34m[200][39m /dashboard [2m274ms[22m
+[2m00:34:34[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m168ms[22m
+[2m00:34:34[22m [34m[200][39m /teams/f3350b1d-d36c-4613-960e-90363e76f631/manage [2m137ms[22m
+[2m00:34:34[22m [33m[302][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m153ms[22m
+[2m00:34:35[22m [34m[200][39m /dashboard [2m173ms[22m
+[2m00:34:35[22m [33m[302][39m [33mPOST[39m /api/teams/create [2m139ms[22m
+[2m00:34:35[22m [34m[200][39m /teams/fb8f0787-c7f8-4494-9dc6-f163697afb7f/manage [2m151ms[22m
+[2m00:34:35[22m [33m[302][39m [33mPOST[39m /api/teams/invite [2m134ms[22m
+[2m00:34:35[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m140ms[22m
+[2m00:34:36[22m [34m[200][39m /teams/f3350b1d-d36c-4613-960e-90363e76f631/manage [2m162ms[22m
+[2m00:34:36[22m [33m[302][39m [33mPOST[39m /api/teams/accept-invite [2m157ms[22m
+[2m00:34:36[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m216ms[22m
+[2m00:34:36[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m145ms[22m
+[2m00:34:36[22m [33m[302][39m [33mPOST[39m /api/teams/remove-member [2m124ms[22m
+[2m00:34:36[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m144ms[22m
+[2m00:34:37[22m [33m[302][39m [33mPOST[39m /api/teams/delete-team [2m142ms[22m
+[2m00:34:37[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m146ms[22m
+[2m00:34:37[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/history [2m182ms[22m
+[2m00:34:37[22m [33m[302][39m [33mPOST[39m /api/teams/remove-member [2m151ms[22m
+[2m00:34:37[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/manage [2m148ms[22m
+[2m00:34:38[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/history [2m173ms[22m
+[2m00:34:38[22m [34m[200][39m /dashboard [2m254ms[22m
+[2m00:34:38[22m [33m[302][39m [33mPOST[39m /api/teams/delete-team [2m62ms[22m
+[2m00:34:38[22m [34m[200][39m /dashboard [2m296ms[22m
+[2m00:35:22[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m145ms[22m
+[2m00:35:22[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m155ms[22m
+[2m00:35:22[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m151ms[22m
+[2m00:35:22[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m149ms[22m
+[2m00:35:23[22m [34m[200][39m /dashboard [2m520ms[22m
+[2m00:35:23[22m [34m[200][39m /dashboard [2m832ms[22m
+[2m00:35:23[22m [33m[302][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m334ms[22m
+[2m00:35:23[22m [34m[200][39m /dashboard [2m898ms[22m
+[2m00:35:23[22m [34m[200][39m /dashboard [2m890ms[22m
+[2m00:35:24[22m [34m[200][39m /dashboard [2m257ms[22m
+[2m00:35:24[22m [33m[302][39m [33mPOST[39m /api/teams/remove-member [2m263ms[22m
+[2m00:35:24[22m [33m[302][39m [33mPOST[39m /api/teams/remove-member [2m256ms[22m
+[2m00:35:24[22m [33m[302][39m [33mPOST[39m /api/teams/delete-team [2m271ms[22m
+[2m00:35:24[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/manage [2m242ms[22m
+[2m00:35:24[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m256ms[22m
+[2m00:35:24[22m [34m[200][39m /teams/f1cb6dce-ca01-4f04-8a15-2dc61d78c44a/manage [2m247ms[22m
+[2m00:35:47[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m117ms[22m
+[2m00:35:47[22m [34m[200][39m /dashboard [2m321ms[22m
+[2m00:35:48[22m [33m[302][39m [33mPOST[39m /api/teams/remove-member [2m135ms[22m
+[2m00:35:48[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/manage [2m142ms[22m
+[2m00:36:13[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m118ms[22m
+[2m00:36:13[22m [34m[200][39m /dashboard [2m363ms[22m
+[2m00:36:13[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/manage [2m226ms[22m
+[2m00:38:04[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m122ms[22m
+[2m00:38:04[22m [34m[200][39m /dashboard [2m427ms[22m
+[2m00:38:04[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m120ms[22m
+[2m00:38:05[22m [34m[200][39m /dashboard [2m314ms[22m
+[2m00:38:05[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m118ms[22m
+[2m00:38:05[22m [34m[200][39m /dashboard [2m304ms[22m
+[2m00:38:05[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m114ms[22m
+[2m00:38:06[22m [34m[200][39m /dashboard [2m186ms[22m
+[2m00:38:06[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m113ms[22m
+[2m00:38:06[22m [34m[200][39m /dashboard [2m294ms[22m
+[2m00:38:06[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m111ms[22m
+[2m00:38:06[22m [34m[200][39m /dashboard [2m306ms[22m
+[2m00:38:07[22m [33m[302][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m155ms[22m
+[2m00:38:07[22m [34m[200][39m /dashboard [2m195ms[22m
+[2m00:38:07[22m [33m[302][39m [33mPOST[39m /api/teams/create [2m141ms[22m
+[2m00:38:07[22m [34m[200][39m /teams/ab1269eb-3011-4791-bba0-a37ecba98645/manage [2m140ms[22m
+[2m00:38:07[22m [33m[302][39m [33mPOST[39m /api/teams/invite [2m132ms[22m
+[2m00:38:08[22m [34m[200][39m /teams/ab1269eb-3011-4791-bba0-a37ecba98645/manage [2m151ms[22m
+[2m00:38:08[22m [33m[302][39m [33mPOST[39m /api/teams/accept-invite [2m139ms[22m
+[2m00:38:08[22m [34m[200][39m /teams/ab1269eb-3011-4791-bba0-a37ecba98645/manage [2m141ms[22m
+[2m00:38:08[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m139ms[22m
+[2m00:38:08[22m [33m[302][39m [33mPOST[39m /api/teams/remove-member [2m125ms[22m
+[2m00:38:09[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m157ms[22m
+[2m00:38:09[22m [33m[302][39m [33mPOST[39m /api/teams/delete-team [2m136ms[22m
+[2m00:38:09[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m147ms[22m
+[2m00:38:09[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/history [2m192ms[22m
+[2m00:38:10[22m [33m[302][39m [33mPOST[39m /api/teams/remove-member [2m150ms[22m
+[2m00:38:10[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/manage [2m132ms[22m
+[2m00:38:10[22m [34m[200][39m /teams/4e2af4be-9eff-4ece-b9fe-4196759321af/history [2m162ms[22m
+[2m00:38:10[22m [34m[200][39m /dashboard [2m178ms[22m
+[2m00:38:10[22m [33m[302][39m [33mPOST[39m /api/teams/create [2m136ms[22m
+[2m00:38:10[22m [34m[200][39m /teams/705c4cde-1db6-4e25-ac11-7c9c074bb42e/manage [2m138ms[22m
+[2m00:38:11[22m [33m[302][39m [33mPOST[39m /api/teams/delete-team [2m151ms[22m
+[2m00:38:11[22m [34m[200][39m /teams/f1cb6dce-ca01-4f04-8a15-2dc61d78c44a/manage [2m135ms[22m
+[2m00:38:24[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m145ms[22m
+[2m00:38:25[22m [34m[200][39m /dashboard [2m336ms[22m
+[2m00:38:25[22m [33m[302][39m [33mPOST[39m /api/teams/remove-member [2m143ms[22m
+[2m00:38:25[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m138ms[22m
+[2m00:38:25[22m [33m[302][39m [33mPOST[39m /api/teams/delete-team [2m121ms[22m
+[2m00:38:25[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m147ms[22m
+[2m00:38:38[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m130ms[22m
+[2m00:38:38[22m [34m[200][39m /dashboard [2m308ms[22m
+[2m00:38:38[22m [33m[302][39m [33mPOST[39m /api/teams/delete-team [2m140ms[22m
+[2m00:38:38[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m153ms[22m
+[2m00:39:14[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m119ms[22m
+[2m00:39:14[22m [34m[200][39m /dashboard [2m342ms[22m
+[2m00:39:14[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m193ms[22m
+[2m00:39:36[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m138ms[22m
+[2m00:39:37[22m [34m[200][39m /dashboard [2m321ms[22m
+[2m00:39:37[22m [33m[302][39m [33mPOST[39m /api/teams/remove-member [2m173ms[22m
+[2m00:39:37[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m152ms[22m
+[2m00:39:37[22m [33m[302][39m [33mPOST[39m /api/teams/remove-member [2m59ms[22m
+[2m00:39:37[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m165ms[22m
+[2m00:39:37[22m [33m[302][39m [33mPOST[39m /api/teams/delete-team [2m135ms[22m
+[2m00:39:38[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m160ms[22m
+[2m00:39:51[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m121ms[22m
+[2m00:39:52[22m [34m[200][39m /dashboard [2m313ms[22m
+[2m00:39:52[22m [33m[302][39m [33mPOST[39m /api/teams/remove-member [2m59ms[22m
+[2m00:39:52[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m155ms[22m
+[2m00:39:52[22m [33m[302][39m [33mPOST[39m /api/teams/delete-team [2m150ms[22m
+[2m00:39:52[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m163ms[22m
+[2m00:40:07[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m143ms[22m
+[2m00:40:07[22m [34m[200][39m /dashboard [2m347ms[22m
+[2m00:40:07[22m [33m[302][39m [33mPOST[39m /api/teams/remove-member [2m69ms[22m
+[2m00:40:08[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m170ms[22m
+[2m00:40:08[22m [33m[302][39m [33mPOST[39m /api/teams/delete-team [2m146ms[22m
+[2m00:40:08[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m147ms[22m
+[2m00:40:19[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m120ms[22m
+[2m00:40:19[22m [34m[200][39m /dashboard [2m328ms[22m
+[2m00:40:19[22m [33m[302][39m [33mPOST[39m /api/teams/remove-member [2m62ms[22m
+[2m00:40:19[22m [34m[200][39m /teams/9f6e1cd1-838e-4068-9f5b-4d463b817689/manage [2m147ms[22m
+[2m00:40:30[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m111ms[22m
+[2m00:40:30[22m [34m[200][39m /dashboard [2m302ms[22m
+[2m00:40:31[22m [34m[200][39m /dashboard [2m285ms[22m
+[2m00:40:46[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m118ms[22m
+[2m00:40:46[22m [34m[200][39m /dashboard [2m308ms[22m
+[2m00:40:46[22m [34m[200][39m /dashboard [2m292ms[22m
+[2m00:40:46[22m [33m[302][39m [33mPOST[39m /api/games/emoji-check-in/submit [2m154ms[22m
+[2m00:40:47[22m [34m[200][39m /dashboard [2m285ms[22m
+[2m00:40:55[22m [33m[302][39m [33mPOST[39m /api/auth/signin [2m122ms[22m
+[2m00:40:55[22m [34m[200][39m /dashboard [2m312ms[22m
+[2m00:40:56[22m [34m[200][39m /dashboard [2m271ms[22m
+[vite] program reload
+[vite] program reload
+[vite] program reload
+[vite] program reload
+[vite] program reload
+[vite] program reload
