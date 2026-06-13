@@ -68,6 +68,14 @@ const astroConfig = tseslint.config({
   },
 });
 
+const testConfig = tseslint.config({
+  files: ["tests/**/*.ts"],
+  rules: {
+    "no-console": "off",
+    "@typescript-eslint/unbound-method": "off",
+  },
+});
+
 export default tseslint.config(
   includeIgnoreFile(gitignorePath),
   baseConfig,
@@ -75,5 +83,6 @@ export default tseslint.config(
   eslintPluginAstro.configs["flat/recommended"],
   ...eslintPluginAstro.configs["flat/jsx-a11y-recommended"],
   astroConfig,
+  testConfig,
   eslintPluginPrettier,
 );
