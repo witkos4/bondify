@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { EmojiCheckInOption } from "@/lib/emoji-check-in";
+import { cn } from "@/lib/utils";
 
 interface EmojiCheckInPickerProps {
   teamId: string;
@@ -65,26 +66,28 @@ export default function EmojiCheckInPicker({
                 toggleEmoji(option.emoji);
               }}
               aria-pressed={isSelected}
-              className={[
+              title={`${option.label}: ${option.description}`}
+              className={cn(
                 "rounded-3xl border p-4 text-left transition",
                 isSelected
                   ? "border-amber-200/45 bg-amber-200/12 shadow-lg shadow-amber-500/10"
                   : "border-white/10 bg-white/6 hover:border-cyan-200/35 hover:bg-cyan-200/8",
-                isLocked ? "opacity-55" : "",
-              ].join(" ")}
+                isLocked && "opacity-55",
+              )}
             >
               <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-3xl">{option.emoji}</p>
+                <div className="min-w-0">
+                  <p className="emoji-glyph text-3xl leading-none">{option.emoji}</p>
                   <p className="mt-3 text-base font-semibold text-white">{option.label}</p>
+                  <p className="mt-2 text-sm leading-6 text-blue-100/65">{option.description}</p>
                 </div>
                 <span
-                  className={[
-                    "mt-1 inline-flex size-6 items-center justify-center rounded-full border text-xs font-semibold",
+                  className={cn(
+                    "mt-1 inline-flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
                     isSelected
                       ? "border-amber-200/45 bg-amber-100/15 text-amber-100"
                       : "border-white/10 bg-slate-950/35 text-blue-100/45",
-                  ].join(" ")}
+                  )}
                 >
                   {isSelected ? "✓" : "+"}
                 </span>

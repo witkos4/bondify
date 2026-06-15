@@ -39,7 +39,12 @@ export const EMOJI_CHECK_IN_OPTIONS: EmojiCheckInOption[] = [
   { emoji: "🧘", label: "Centered", description: "The team feels present, balanced, and grounded." },
 ];
 
+const EMOJI_CHECK_IN_OPTION_BY_EMOJI = new Map(EMOJI_CHECK_IN_OPTIONS.map((option) => [option.emoji, option]));
 const VALID_EMOJI_CHECK_IN_EMOJIS = new Set(EMOJI_CHECK_IN_OPTIONS.map((option) => option.emoji));
+
+export function getEmojiCheckInOption(emoji: string): EmojiCheckInOption | null {
+  return EMOJI_CHECK_IN_OPTION_BY_EMOJI.get(emoji) ?? null;
+}
 
 export function getEmojiCheckInSessionDateKey(
   date: Date = new Date(),

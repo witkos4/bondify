@@ -1,4 +1,5 @@
 import * as React from "react";
+import { getEmojiCheckInOption } from "@/lib/emoji-check-in";
 import type { EmojiCheckInAggregatedEmojiCount } from "@/types";
 
 interface EmojiCheckInRevealProps {
@@ -66,7 +67,7 @@ export default function EmojiCheckInReveal({
           {burstEmojis.map((emoji, index) => (
             <span
               key={`${emoji}-${index}`}
-              className="absolute top-1/2 left-1/2 [animation:emoji-check-in-burst_1100ms_ease-out_forwards] text-4xl"
+              className="emoji-glyph absolute top-1/2 left-1/2 [animation:emoji-check-in-burst_1100ms_ease-out_forwards] text-4xl"
               style={
                 {
                   "--emoji-burst-x": BURST_VECTORS[index].x,
@@ -95,16 +96,26 @@ export default function EmojiCheckInReveal({
         </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {emojiCounts.map((entry) => (
-            <article key={entry.emoji} className="rounded-3xl border border-white/10 bg-slate-950/25 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-3xl">{entry.emoji}</p>
-                <span className="rounded-full border border-emerald-200/30 bg-emerald-100/10 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-emerald-50 uppercase">
-                  {entry.count} vote{entry.count === 1 ? "" : "s"}
-                </span>
-              </div>
-            </article>
-          ))}
+          {emojiCounts.map((entry) => {
+            const option = getEmojiCheckInOption(entry.emoji);
+
+            return (
+              <article key={entry.emoji} className="rounded-3xl border border-white/10 bg-slate-950/25 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="emoji-glyph text-3xl leading-none">{entry.emoji}</p>
+                    <p className="mt-3 text-base font-semibold text-white">{option?.label ?? "Shared signal"}</p>
+                  </div>
+                  <span className="rounded-full border border-emerald-200/30 bg-emerald-100/10 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-emerald-50 uppercase">
+                    {entry.count} vote{entry.count === 1 ? "" : "s"}
+                  </span>
+                </div>
+                {option?.description && (
+                  <p className="mt-3 text-sm leading-6 text-emerald-50/75">{option.description}</p>
+                )}
+              </article>
+            );
+          })}
         </div>
       </div>
     </div>

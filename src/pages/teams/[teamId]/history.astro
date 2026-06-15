@@ -1,6 +1,7 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import Topbar from "@/components/Topbar.astro";
+import { getEmojiCheckInOption } from "@/lib/emoji-check-in";
 import { consumeHistoryFlash } from "@/lib/history-flash";
 import { callBondifyService, createBondifyServices } from "@/lib/services/bondify";
 import type { ParticipantSafeHistoryEntry, TeamHistoryState } from "@/types";
@@ -63,6 +64,10 @@ function formatSessionDate(value: string) {
     month: "short",
     day: "numeric",
   }).format(new Date(`${value}T00:00:00Z`));
+}
+
+function getEmojiCheckInLabel(emoji: string) {
+  return getEmojiCheckInOption(emoji)?.label ?? "Shared signal";
 }
 
 function groupHistoryEntries(entries: ParticipantSafeHistoryEntry[]): HistoryGroup[] {
@@ -182,7 +187,8 @@ const hasLinkedGameHistory = historyGroups.length > 0;
                         <div class="mt-4 flex flex-wrap gap-2">
                           {entry.emojiCounts.map((count) => (
                             <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/35 px-3 py-2 text-sm text-white">
-                              <span class="text-xl">{count.emoji}</span>
+                              <span class="emoji-glyph text-xl leading-none">{count.emoji}</span>
+                              <span>{getEmojiCheckInLabel(count.emoji)}</span>
                               <span class="text-blue-100/70">x{count.count}</span>
                             </span>
                           ))}

@@ -3,7 +3,7 @@ import Layout from "@/layouts/Layout.astro";
 import Topbar from "@/components/Topbar.astro";
 import EmojiCheckInPicker from "@/components/emoji-check-in/EmojiCheckInPicker.tsx";
 import EmojiCheckInReveal from "@/components/emoji-check-in/EmojiCheckInReveal.tsx";
-import { EMOJI_CHECK_IN_OPTIONS, EMOJI_CHECK_IN_TEMPLATE_SLUG } from "@/lib/emoji-check-in";
+import { EMOJI_CHECK_IN_OPTIONS, EMOJI_CHECK_IN_TEMPLATE_SLUG, getEmojiCheckInOption } from "@/lib/emoji-check-in";
 import { consumeDashboardFlash } from "@/lib/dashboard-flash";
 import { callBondifyService, createBondifyServices } from "@/lib/services/bondify";
 import type {
@@ -124,6 +124,10 @@ function formatEmojiCheckInDate(value: string, options?: Intl.DateTimeFormatOpti
     day: "numeric",
     ...options,
   }).format(new Date(`${value}T00:00:00Z`));
+}
+
+function getEmojiCheckInLabel(emoji: string) {
+  return getEmojiCheckInOption(emoji)?.label ?? "Shared signal";
 }
 ---
 
@@ -388,8 +392,9 @@ function formatEmojiCheckInDate(value: string, options?: Intl.DateTimeFormatOpti
                             {emojiCheckInState.currentMemberSubmission && (
                               <div class="mt-5 flex flex-wrap gap-3">
                                 {emojiCheckInState.currentMemberSubmission.emojis.map((emoji) => (
-                                  <span class="inline-flex items-center rounded-full border border-amber-200/35 bg-amber-200/12 px-4 py-2 text-2xl">
-                                    {emoji}
+                                  <span class="inline-flex items-center gap-2 rounded-full border border-amber-200/35 bg-amber-200/12 px-4 py-2 text-sm text-white">
+                                    <span class="emoji-glyph text-2xl leading-none">{emoji}</span>
+                                    <span>{getEmojiCheckInLabel(emoji)}</span>
                                   </span>
                                 ))}
                               </div>
@@ -492,7 +497,8 @@ function formatEmojiCheckInDate(value: string, options?: Intl.DateTimeFormatOpti
                                 <div class="mt-4 flex flex-wrap gap-2">
                                   {entry.emojiCounts.map((count) => (
                                     <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/35 px-3 py-2 text-sm text-white">
-                                      <span class="text-xl">{count.emoji}</span>
+                                      <span class="emoji-glyph text-xl leading-none">{count.emoji}</span>
+                                      <span>{getEmojiCheckInLabel(count.emoji)}</span>
                                       <span class="text-blue-100/70">×{count.count}</span>
                                     </span>
                                   ))}
