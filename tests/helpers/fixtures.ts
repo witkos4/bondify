@@ -315,13 +315,10 @@ export async function createEmojiSessionAs(
   };
 }
 
-export async function prepareTwoTruthsVotingRound(input: {
-  member: TestUser;
-  memberMembershipId: string;
+export async function prepareTwoTruthsCollectionRound(input: {
   owner: TestUser;
-  ownerMembershipId: string;
   teamId: string;
-}): Promise<TwoTruthsVotingFixture> {
+}): Promise<RoundFixture> {
   const round = await openRoundAs(input.owner, input.teamId, "two-truths-and-a-lie");
   const { error: structuredRoundError } = await input.owner.client.from("two_truths_rounds").insert({
     game_round_id: round.id,
@@ -331,6 +328,21 @@ export async function prepareTwoTruthsVotingRound(input: {
   if (structuredRoundError) {
     throw new Error(`Failed to create structured Two Truths round ${round.id}: ${structuredRoundError.message}`);
   }
+
+  return round;
+}
+
+export async function prepareTwoTruthsVotingRound(input: {
+  member: TestUser;
+  memberMembershipId: string;
+  owner: TestUser;
+  ownerMembershipId: string;
+  teamId: string;
+}): Promise<TwoTruthsVotingFixture> {
+  const round = await prepareTwoTruthsCollectionRound({
+    owner: input.owner,
+    teamId: input.teamId,
+  });
 
   const ownerEntryId = randomUUID();
   const memberEntryId = randomUUID();
