@@ -331,7 +331,7 @@ None — no schema changes. The suite runs against whatever migration state is a
 - [x] 1.1 `npm install` succeeds and `npm ls vite` shows one deduped vite 7.3.3
 - [x] 1.2 `npm test` runs the smoke test green against a running local stack
 - [x] 1.3 `npm run lint` passes
-- [ ] 1.4 `npx astro check` reports no new type errors
+- [x] 1.4 `npx astro check` reports no new type errors
 
 #### Manual
 
@@ -376,8 +376,8 @@ None — no schema changes. The suite runs against whatever migration state is a
 
 #### Automated
 
-- [ ] 5.1 `npm run lint` passes
-- [ ] 5.2 `npm test` full suite green
+- [x] 5.1 `npm run lint` passes
+- [x] 5.2 `npm test` full suite green
 
 #### Manual
 

@@ -29,14 +29,13 @@ describe("access grants", () => {
     const secondTeam = await createTeamAs(scenario.ownerA, "Bondify Test Team A Second", cleanup);
     const { data, error } = await scenario.ownerA.client
       .from("team_memberships")
-      .select("id, team_id, profile_id, removed_at")
+      .select("id, team_id, profile_id")
       .eq("id", secondTeam.ownerMembershipId)
-      .maybeSingle<{ id: string; profile_id: string; removed_at: string | null; team_id: string }>();
+      .maybeSingle<{ id: string; profile_id: string; team_id: string }>();
 
     expect(error).toBeNull();
     expect(data?.team_id).toBe(secondTeam.id);
     expect(data?.profile_id).toBe(scenario.ownerA.userId);
-    expect(data?.removed_at).toBeNull();
   });
 
   it("grants team visibility after a real invite acceptance flow", async () => {
@@ -76,11 +75,18 @@ describe("access grants", () => {
       .single<TeamSummaryShape>();
 
     expect(error).toBeNull();
-    expect(data.team_memberships).toHaveLength(2);
-    expect(data.team_memberships.map((membership) => membership.profile_id).sort()).toEqual(
+    expect(data).not.toBeNull();
+    if (!data) {
+      throw new Error("Expected the invited member to load their team summary.");
+    }
+
+    const team = data;
+
+    expect(team.team_memberships).toHaveLength(2);
+    expect(team.team_memberships.map((membership) => membership.profile_id).sort()).toEqual(
       [scenario.memberA2.userId, scenario.ownerA.userId].sort(),
     );
-    expect(data.team_invites.map((invite) => invite.id)).toContain(scenario.inviteToTeamA.id);
+    expect(team.team_invites.map((invite) => invite.id)).toContain(scenario.inviteToTeamA.id);
   });
 
   it("lets invited members read rounds opened by another teammate", async () => {

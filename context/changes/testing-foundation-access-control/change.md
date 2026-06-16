@@ -3,7 +3,7 @@ change_id: testing-foundation-access-control
 title: Test foundation and access-control critical path (test rollout Phase 1)
 status: implementing
 created: 2026-06-13
-updated: 2026-06-13
+updated: 2026-06-16
 archived_at: null
 ---
 

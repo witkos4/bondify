@@ -6,7 +6,7 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-06-13
+> Last updated: 2026-06-16
 
 ## 1. Strategy
 
@@ -71,7 +71,7 @@ orchestrator updates Status as artifacts appear on disk.
 
 | # | Phase name | Goal (one line) | Risks covered | Test types | Status | Change folder |
 |---|---|---|---|---|---|---|
-| 1 | Test foundation + access-control critical path | Bootstrap the test runner and local-Supabase integration harness; prove membership grants access and team scoping holds | #1, #2 | integration + unit | planned | context/changes/testing-foundation-access-control/ |
+| 1 | Test foundation + access-control critical path | Bootstrap the test runner and local-Supabase integration harness; prove membership grants access and team scoping holds | #1, #2 | integration + unit | implementing | context/changes/testing-foundation-access-control/ |
 | 2 | Game-rule integrity | Prove the daily check-in and Two Truths rules are enforced server-side, not just in the UI | #3, #4 | integration + unit | not started | — |
 | 3 | Owner actions and destructive paths | Prove owner-only authorization and a bounded blast radius for remove-member/delete-team | #5 | integration | not started | — |
 | 4 | Quality gates and environment parity | Wire the suite into CI behind a full migration + seed replay; add a minimal landing-flow smoke probe | #6 | gates + migration-replay smoke | not started | — |
@@ -87,9 +87,9 @@ session.
 
 | Layer | Tool | Version | Notes |
 |---|---|---|---|
-| unit + integration | none yet — see §3 Phase 1 | — | Vitest is the natural fit (Vite 7 already pinned via overrides); Phase 1 research must verify against Astro 6 SSR + Cloudflare adapter |
-| DB / RLS harness | none yet — see §3 Phase 1 | — | Local Supabase (`npx supabase start`, supabase CLI ^2.101.0 in devDependencies) with seeded users per role |
-| API mocking | none yet — see §3 Phase 1 | — | Mocking policy to be set by Phase 1: prefer real local Supabase over mocks for RLS-bearing paths |
+| unit + integration | Vitest | `^4.0.0` (`vitest run` currently resolves to 4.1.8 locally) | Config lives in `vitest.config.ts`; global setup is `tests/setup/global.ts`, which means `npm test` currently expects a running local Supabase stack even for narrow runs |
+| DB / RLS harness | Local Supabase + raw `@supabase/supabase-js` clients | CLI `^2.101.0`, JS client `^2.99.1` | `adminClient()` mints users / verifies side effects; per-user anon-key clients sign in with passwords and exercise real RLS policies |
+| API mocking | none | — | Deliberately skipped for Phase 1: real PostgREST + JWT behavior is the product boundary we need signal from |
 | e2e | none planned | — | Deliberately deferred: §2 risks are server-enforcement risks, cheapest at integration level; revisit only if a routing/session risk proves untestable below browser level |
 | CI gates | GitHub Actions (lint + build wired) | — | Test job added by §3 Phase 4 with migration + seed replay |
 
@@ -121,13 +121,45 @@ the relevant rollout phase ships; before that, the sub-section reads
 
 ### 6.1 Adding a unit test
 
-- TBD — see §3 Phase 1 (runner bootstrap; first pattern lands with the
-  access-control coverage).
+- Put new tests under `tests/**/*.test.ts`; discovery is controlled by
+  `vitest.config.ts`.
+- Run `npm test` for CI-shaped execution or `npm run test:watch` while
+  iterating. Today both flows execute `tests/setup/global.ts`, so keep local
+  Supabase running first: `npx supabase start`.
+- The global setup shells out to `npx supabase status -o env`, exports
+  `BONDIFY_TEST_SUPABASE_URL`, `BONDIFY_TEST_ANON_KEY`, and
+  `BONDIFY_TEST_SERVICE_ROLE_KEY`, and fails fast with the Docker /
+  `npx supabase start` diagnostic if the stack is down.
+- Prefer plain Vitest structure (`describe`, `it`, `expect`) and keep new
+  unit tests dependency-light. If a future test genuinely does not need
+  Supabase, that is a hint to split configs rather than weaken the current
+  preflight.
 
 ### 6.2 Adding an integration test against local Supabase (RLS-level)
 
-- TBD — see §3 Phase 1 for the membership-access and cross-team-denial
-  pattern (seeded users per role, real policies, no DB mocks).
+- Start from the real-client helpers in `tests/helpers/clients.ts`,
+  `tests/helpers/fixtures.ts`, `tests/helpers/scenario.ts`, and
+  `tests/helpers/cleanup.ts`.
+- Use `adminClient()` only for fixture minting and zero-delta verification.
+  The assertion subject should be a signed-in anon-key client returned by
+  `userClient()` so the test runs under the same JWT + RLS path as
+  production.
+- Reuse `setupTwoTeamScenario()` when the risk is "member of team A vs
+  outsider from team B". It gives one owner, one invited teammate accepted
+  through the real invite flow, one outsider, and two teams with additive
+  UUID-based fixtures.
+- Mirror production write sequences inside helpers instead of hand-waving
+  fixture state. Current examples:
+  `createTeamAs()` mirrors `src/lib/services/bondify.ts:1828-1845`,
+  `inviteToTeamAs()` mirrors the invite insert path,
+  and `acceptInviteAs()` mirrors `src/lib/services/bondify.ts:2039-2098`.
+- Match the assertion style to the denial mode. Silent RLS reads should
+  assert `error === null` plus empty data. Loud writes / RPC guards should
+  assert the error and then confirm zero row delta with the admin client.
+- Use `tests/rls/access-grants.test.ts` as the positive-presence template
+  and `tests/rls/cross-team-denial.test.ts` as the denial + zero-delta
+  template. Do not replace these with DB mocks; the policies are the thing
+  under test.
 
 ### 6.3 Adding a test for a game-rule (server-enforced constraint)
 
@@ -145,8 +177,15 @@ the relevant rollout phase ships; before that, the sub-section reads
 
 ### 6.6 Per-rollout-phase notes
 
-(After each phase lands, /10x-implement appends a 2–3 line note here
-capturing anything surprising the rollout phase taught.)
+- Phase 1 taught that raw `@supabase/supabase-js` clients are the cheapest
+  high-signal layer for Bondify because the real boundary is PostgREST + RLS,
+  not Astro service wrappers.
+- Supabase relation selects for nested profile / template joins currently
+  arrive as arrays in strict typechecking, so `src/lib/services/bondify.ts`
+  normalizes those joined rows before converting them into domain objects.
+- The stack preflight is worth keeping strict: local environment failures are
+  common enough that the Docker / `npx supabase start` diagnostic saves more
+  time than it costs.
 
 ## 7. What We Deliberately Don't Test
 
@@ -168,7 +207,7 @@ contributors should respect these unless the underlying assumption changes.
 ## 8. Freshness Ledger
 
 - Strategy (§1–§5) last reviewed: 2026-06-13
-- Stack versions last verified: 2026-06-13
+- Stack versions last verified: 2026-06-16
 - AI-native tool references last verified: 2026-06-13
 
 Refresh (`/10x-test-plan --refresh`) when:

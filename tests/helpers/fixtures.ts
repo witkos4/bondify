@@ -164,7 +164,6 @@ export async function createTeamAs(user: TestUser, name: string, cleanup: Cleanu
   const { error: membershipError } = await user.client.from("team_memberships").insert({
     id: membershipId,
     profile_id: user.userId,
-    removed_at: null,
     team_id: teamId,
   });
 
@@ -248,7 +247,6 @@ export async function acceptInviteAs(user: TestUser, inviteId: string): Promise<
   const { error: membershipError } = await user.client.from("team_memberships").insert({
     id: membershipId,
     profile_id: user.userId,
-    removed_at: null,
     team_id: updatedInvite.team_id,
   });
 

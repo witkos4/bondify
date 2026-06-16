@@ -83,6 +83,10 @@ interface TeamMembershipRow {
   removed_at: string | null;
 }
 
+interface LegacyTeamMembershipRow extends Omit<TeamMembershipRow, "removed_at"> {
+  removed_at?: string | null;
+}
+
 interface TeamInviteRow {
   id: string;
   team_id: string;
@@ -189,17 +193,37 @@ interface EmojiCheckInSubmissionRow {
   created_at: string;
 }
 
+type JoinedRow<T> = T | T[] | null;
+
+interface RawTeamMembershipWithProfileRow extends TeamMembershipRow {
+  profile: JoinedRow<Pick<ProfileRow, "id" | "email" | "normalized_email">>;
+}
+
 interface TeamMembershipWithProfileRow extends TeamMembershipRow {
   profile: Pick<ProfileRow, "id" | "email" | "normalized_email">;
+}
+
+interface RawTeamInviteWithAcceptedProfileRow extends TeamInviteRow {
+  accepted_profile: JoinedRow<Pick<ProfileRow, "id" | "email" | "normalized_email">>;
 }
 
 interface TeamInviteWithAcceptedProfileRow extends TeamInviteRow {
   accepted_profile: Pick<ProfileRow, "id" | "email" | "normalized_email"> | null;
 }
 
+interface RawTeamSummaryRow extends TeamRow {
+  team_memberships: RawTeamMembershipWithProfileRow[];
+  team_invites: RawTeamInviteWithAcceptedProfileRow[];
+}
+
 interface TeamSummaryRow extends TeamRow {
   team_memberships: TeamMembershipWithProfileRow[];
   team_invites: TeamInviteWithAcceptedProfileRow[];
+}
+
+interface RawGameRoundWithTemplateRow extends GameRoundRow {
+  game_template: JoinedRow<TemplateProjectionRow>;
+  game_responses: GameResponseRow[];
 }
 
 interface GameRoundWithTemplateRow extends GameRoundRow {
@@ -211,13 +235,26 @@ interface ActiveGameRoundRow extends GameRoundRow {
   game_responses: Pick<GameResponseRow, "id" | "membership_id">[];
 }
 
+interface RawHistoryEntryRow extends GameRoundRow {
+  game_template: JoinedRow<TemplateProjectionRow>;
+  game_responses: GameResponseRow[];
+}
+
 interface HistoryEntryRow extends GameRoundRow {
   game_template: TemplateProjectionRow;
   game_responses: GameResponseRow[];
 }
 
+interface RawTwoTruthsEntryWithAuthorRow extends TwoTruthsEntryRow {
+  author_profile: JoinedRow<Pick<ProfileRow, "id" | "email" | "normalized_email">>;
+}
+
 interface TwoTruthsEntryWithAuthorRow extends TwoTruthsEntryRow {
   author_profile: Pick<ProfileRow, "id" | "email" | "normalized_email">;
+}
+
+interface RawTwoTruthsGuessWithVoterRow extends TwoTruthsGuessRow {
+  voter_profile: JoinedRow<Pick<ProfileRow, "id" | "email" | "normalized_email">>;
 }
 
 interface TwoTruthsGuessWithVoterRow extends TwoTruthsGuessRow {
@@ -256,6 +293,61 @@ const MAX_TWO_TRUTHS_STATEMENT_LENGTH = 200;
 const HISTORY_RETENTION_DAYS = 30;
 const EMOJI_CHECK_IN_TIMELINE_DAYS = 30;
 const TWO_TRUTHS_TEMPLATE_SLUG = "two-truths-and-a-lie";
+const ACTIVE_TEAM_MEMBERSHIP_SELECT = "id, team_id, profile_id, created_at, removed_at";
+const LEGACY_TEAM_MEMBERSHIP_SELECT = "id, team_id, profile_id, created_at";
+const TEAM_INVITE_SUMMARY_SELECT = `
+  id,
+  team_id,
+  inviter_profile_id,
+  email,
+  normalized_email,
+  status,
+  accepted_profile_id,
+  accepted_at,
+  created_at,
+  updated_at,
+  accepted_profile:profiles!team_invites_accepted_profile_id_fkey (
+    id,
+    email,
+    normalized_email
+  )
+`;
+const TEAM_SUMMARY_SELECT = `
+  id,
+  name,
+  created_by,
+  created_at,
+  updated_at,
+  team_memberships (
+    ${ACTIVE_TEAM_MEMBERSHIP_SELECT},
+    profile:profiles (
+      id,
+      email,
+      normalized_email
+    )
+  ),
+  team_invites (
+    ${TEAM_INVITE_SUMMARY_SELECT}
+  )
+`;
+const LEGACY_TEAM_SUMMARY_SELECT = `
+  id,
+  name,
+  created_by,
+  created_at,
+  updated_at,
+  team_memberships (
+    ${LEGACY_TEAM_MEMBERSHIP_SELECT},
+    profile:profiles (
+      id,
+      email,
+      normalized_email
+    )
+  ),
+  team_invites (
+    ${TEAM_INVITE_SUMMARY_SELECT}
+  )
+`;
 
 export class BondifyServiceError extends Error {
   readonly code: BondifyDomainErrorCode;
@@ -287,6 +379,33 @@ function normalizeEmail(email: string): string {
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function isMissingColumnError(error: SupabaseLikeError | null, table: string, column: string): boolean {
+  const message = error?.message?.toLowerCase() ?? "";
+
+  return (
+    message.includes(`column ${table.toLowerCase()}.${column.toLowerCase()} does not exist`) ||
+    message.includes(`could not find the '${column.toLowerCase()}' column of '${table.toLowerCase()}'`)
+  );
+}
+
+function unwrapJoinedRow<T>(value: JoinedRow<T>): T | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value;
+}
+
+function requireJoinedRow<T>(value: JoinedRow<T>, relationName: string): T {
+  const row = unwrapJoinedRow(value);
+
+  if (!row) {
+    throw new Error(`Expected joined row for ${relationName}.`);
+  }
+
+  return row;
 }
 
 function toProfile(row: ProfileRow): BondifyProfile {
@@ -321,6 +440,89 @@ function toMembership(row: TeamMembershipRow): BondifyTeamMembership {
 
 function isActiveMembership(row: TeamMembershipRow): boolean {
   return row.removed_at === null;
+}
+
+function normalizeLegacyTeamMembershipRow<T extends LegacyTeamMembershipRow>(row: T): T & TeamMembershipRow {
+  return {
+    ...row,
+    removed_at: row.removed_at ?? null,
+  };
+}
+
+async function findActiveMembershipByTeamAndProfile(
+  supabase: SupabaseServerClient,
+  input: { teamId: string; profileId: string },
+): Promise<TeamMembershipRow | null> {
+  const { teamId, profileId } = input;
+  const { data: membership, error } = await supabase
+    .from("team_memberships")
+    .select(ACTIVE_TEAM_MEMBERSHIP_SELECT)
+    .eq("team_id", teamId)
+    .eq("profile_id", profileId)
+    .is("removed_at", null)
+    .maybeSingle();
+
+  if (!error) {
+    return membership;
+  }
+
+  if (!isMissingColumnError(error, "team_memberships", "removed_at")) {
+    throw new BondifyServiceError("TEAM_ACCESS_DENIED", error.message, { teamId, profileId });
+  }
+
+  const { data: legacyMembership, error: legacyError } = await supabase
+    .from("team_memberships")
+    .select(LEGACY_TEAM_MEMBERSHIP_SELECT)
+    .eq("team_id", teamId)
+    .eq("profile_id", profileId)
+    .maybeSingle<LegacyTeamMembershipRow>();
+
+  if (legacyError) {
+    throw new BondifyServiceError("TEAM_ACCESS_DENIED", legacyError.message, { teamId, profileId });
+  }
+
+  return legacyMembership ? normalizeLegacyTeamMembershipRow(legacyMembership) : null;
+}
+
+async function hasActiveMembershipForNormalizedEmail(
+  supabase: SupabaseServerClient,
+  input: { normalizedEmail: string; teamId: string },
+): Promise<boolean> {
+  const { normalizedEmail, teamId } = input;
+  const { data: existingMemberships, error } = await supabase
+    .from("team_memberships")
+    .select("id, removed_at, profile:profiles!inner(normalized_email)")
+    .eq("team_id", teamId)
+    .eq("profile.normalized_email", normalizedEmail)
+    .is("removed_at", null)
+    .limit(1);
+
+  if (!error) {
+    return existingMemberships.length > 0;
+  }
+
+  if (!isMissingColumnError(error, "team_memberships", "removed_at")) {
+    throw new BondifyServiceError("TEAM_ACCESS_DENIED", error.message, {
+      normalizedEmail,
+      teamId,
+    });
+  }
+
+  const { data: legacyMemberships, error: legacyError } = await supabase
+    .from("team_memberships")
+    .select("id, profile:profiles!inner(normalized_email)")
+    .eq("team_id", teamId)
+    .eq("profile.normalized_email", normalizedEmail)
+    .limit(1);
+
+  if (legacyError) {
+    throw new BondifyServiceError("TEAM_ACCESS_DENIED", legacyError.message, {
+      normalizedEmail,
+      teamId,
+    });
+  }
+
+  return legacyMemberships.length > 0;
 }
 
 function toInvite(row: TeamInviteRow): BondifyTeamInvite {
@@ -506,6 +708,58 @@ function toEmojiCheckInTodayState(input: {
   };
 }
 
+function normalizeTeamMembershipWithProfileRow(row: RawTeamMembershipWithProfileRow): TeamMembershipWithProfileRow {
+  return {
+    ...normalizeLegacyTeamMembershipRow(row),
+    profile: requireJoinedRow(row.profile, "team_memberships.profile"),
+  };
+}
+
+function normalizeTeamInviteWithAcceptedProfileRow(
+  row: RawTeamInviteWithAcceptedProfileRow,
+): TeamInviteWithAcceptedProfileRow {
+  return {
+    ...row,
+    accepted_profile: unwrapJoinedRow(row.accepted_profile),
+  };
+}
+
+function normalizeTeamSummaryRow(row: RawTeamSummaryRow): TeamSummaryRow {
+  return {
+    ...row,
+    team_memberships: row.team_memberships.map(normalizeTeamMembershipWithProfileRow),
+    team_invites: row.team_invites.map(normalizeTeamInviteWithAcceptedProfileRow),
+  };
+}
+
+function normalizeGameRoundWithTemplateRow(row: RawGameRoundWithTemplateRow): GameRoundWithTemplateRow {
+  return {
+    ...row,
+    game_template: requireJoinedRow(row.game_template, "game_rounds.game_template"),
+  };
+}
+
+function normalizeHistoryEntryRow(row: RawHistoryEntryRow): HistoryEntryRow {
+  return {
+    ...row,
+    game_template: requireJoinedRow(row.game_template, "game_rounds.game_template"),
+  };
+}
+
+function normalizeTwoTruthsEntryWithAuthorRow(row: RawTwoTruthsEntryWithAuthorRow): TwoTruthsEntryWithAuthorRow {
+  return {
+    ...row,
+    author_profile: requireJoinedRow(row.author_profile, "two_truths_entries.author_profile"),
+  };
+}
+
+function normalizeTwoTruthsGuessWithVoterRow(row: RawTwoTruthsGuessWithVoterRow): TwoTruthsGuessWithVoterRow {
+  return {
+    ...row,
+    voter_profile: requireJoinedRow(row.voter_profile, "two_truths_guesses.voter_profile"),
+  };
+}
+
 function toParticipantSafeResponses(rows: GameResponseRow[]) {
   return rows.map((row) => ({
     id: row.id,
@@ -678,17 +932,7 @@ async function requireMembershipAccess(
   teamId: string,
   profileId: string,
 ): Promise<TeamMembershipRow> {
-  const { data: membership, error } = await supabase
-    .from("team_memberships")
-    .select("id, team_id, profile_id, created_at, removed_at")
-    .eq("team_id", teamId)
-    .eq("profile_id", profileId)
-    .is("removed_at", null)
-    .maybeSingle();
-
-  if (error) {
-    throw new BondifyServiceError("TEAM_ACCESS_DENIED", error.message, { teamId, profileId });
-  }
+  const membership = await findActiveMembershipByTeamAndProfile(supabase, { teamId, profileId });
 
   if (!membership) {
     throw new BondifyServiceError("TEAM_ACCESS_DENIED", "You do not have access to this team.", { teamId, profileId });
@@ -822,7 +1066,7 @@ async function listVisibleHistoryRows(supabase: SupabaseServerClient, teamId: st
     throw new BondifyServiceError("HISTORY_NOT_VISIBLE", error.message, { teamId });
   }
 
-  return data as HistoryEntryRow[];
+  return (data as RawHistoryEntryRow[]).map(normalizeHistoryEntryRow);
 }
 
 async function toParticipantSafeHistoryEntries(
@@ -879,53 +1123,28 @@ function toShellTeamOption(row: TeamSummaryRow): BondifyShellTeamOption {
 }
 
 async function listTeamSummaryRows(supabase: SupabaseServerClient): Promise<TeamSummaryRow[]> {
-  const { data, error } = await supabase
-    .from("teams")
-    .select(
-      `
-        id,
-        name,
-        created_by,
-        created_at,
-        updated_at,
-        team_memberships (
-          id,
-          team_id,
-          profile_id,
-          created_at,
-          removed_at,
-          profile:profiles (
-            id,
-            email,
-            normalized_email
-          )
-        ),
-        team_invites (
-          id,
-          team_id,
-          inviter_profile_id,
-          email,
-          normalized_email,
-          status,
-          accepted_profile_id,
-          accepted_at,
-          created_at,
-          updated_at,
-          accepted_profile:profiles!team_invites_accepted_profile_id_fkey (
-            id,
-            email,
-            normalized_email
-          )
-        )
-      `,
-    )
-    .order("created_at", { ascending: true });
+  const { data, error } = await supabase.from("teams").select(TEAM_SUMMARY_SELECT).order("created_at", {
+    ascending: true,
+  });
 
   if (error) {
+    if (isMissingColumnError(error, "team_memberships", "removed_at")) {
+      const { data: legacyData, error: legacyError } = await supabase
+        .from("teams")
+        .select(LEGACY_TEAM_SUMMARY_SELECT)
+        .order("created_at", { ascending: true });
+
+      if (legacyError) {
+        throw new BondifyServiceError("TEAM_ACCESS_DENIED", legacyError.message);
+      }
+
+      return (legacyData as RawTeamSummaryRow[]).map(normalizeTeamSummaryRow);
+    }
+
     throw new BondifyServiceError("TEAM_ACCESS_DENIED", error.message);
   }
 
-  return data as TeamSummaryRow[];
+  return (data as RawTeamSummaryRow[]).map(normalizeTeamSummaryRow);
 }
 
 async function listPendingInvitesForNormalizedEmail(
@@ -963,7 +1182,9 @@ async function listPendingInvitesForNormalizedEmail(
     });
   }
 
-  return (data as TeamInviteWithAcceptedProfileRow[]).map(toTeamInviteView);
+  return (data as RawTeamInviteWithAcceptedProfileRow[])
+    .map(normalizeTeamInviteWithAcceptedProfileRow)
+    .map(toTeamInviteView);
 }
 
 async function getTemplateBySlug(supabase: SupabaseServerClient, gameSlug: string): Promise<TemplateProjectionRow> {
@@ -1074,7 +1295,7 @@ async function getLatestRevealedGameRound(
     throw new BondifyServiceError("ROUND_NOT_FOUND", error.message, input);
   }
 
-  return data;
+  return data ? normalizeGameRoundWithTemplateRow(data) : null;
 }
 
 async function getEmojiCheckInSessionByTeamAndDate(
@@ -1411,7 +1632,7 @@ async function listTwoTruthsEntries(
     throw new BondifyServiceError("ROUND_NOT_FOUND", error.message, { gameRoundId });
   }
 
-  return data as TwoTruthsEntryWithAuthorRow[];
+  return (data as RawTwoTruthsEntryWithAuthorRow[]).map(normalizeTwoTruthsEntryWithAuthorRow);
 }
 
 async function listTwoTruthsGuesses(
@@ -1443,7 +1664,7 @@ async function listTwoTruthsGuesses(
     throw new BondifyServiceError("ROUND_NOT_FOUND", error.message, { gameRoundId });
   }
 
-  return data as TwoTruthsGuessWithVoterRow[];
+  return (data as RawTwoTruthsGuessWithVoterRow[]).map(normalizeTwoTruthsGuessWithVoterRow);
 }
 
 function toTwoTruthsGuessProgress(input: {
@@ -1844,16 +2065,13 @@ export function createBondifyServices(context: ServiceContext) {
           throw mapDuplicateInsertError(membershipError, duplicateMembershipError(teamId, profile.id));
         }
 
-        const { data: membership, error: createdMembershipError } = await supabase
-          .from("team_memberships")
-          .select("id, team_id, profile_id, created_at, removed_at")
-          .eq("team_id", teamId)
-          .eq("profile_id", profile.id)
-          .is("removed_at", null)
-          .single();
+        const membership = await findActiveMembershipByTeamAndProfile(supabase, {
+          teamId,
+          profileId: profile.id,
+        });
 
-        if (createdMembershipError) {
-          throw new BondifyServiceError("TEAM_ACCESS_DENIED", createdMembershipError.message, {
+        if (!membership) {
+          throw new BondifyServiceError("TEAM_ACCESS_DENIED", "You do not have access to this team.", {
             teamId,
             profileId: profile.id,
           });
@@ -1949,22 +2167,12 @@ export function createBondifyServices(context: ServiceContext) {
 
           seenEmails.add(normalizedEmail);
 
-          const { data: existingMembership, error: membershipLookupError } = await supabase
-            .from("team_memberships")
-            .select("id, removed_at, profile:profiles!inner(normalized_email)")
-            .eq("team_id", input.teamId)
-            .eq("profile.normalized_email", normalizedEmail)
-            .is("removed_at", null)
-            .limit(1);
-
-          if (membershipLookupError) {
-            throw new BondifyServiceError("TEAM_ACCESS_DENIED", membershipLookupError.message, {
+          if (
+            await hasActiveMembershipForNormalizedEmail(supabase, {
               teamId: input.teamId,
               normalizedEmail,
-            });
-          }
-
-          if (existingMembership.length > 0) {
+            })
+          ) {
             results.push({
               email: trimmedEmail,
               normalizedEmail,
@@ -2104,16 +2312,13 @@ export function createBondifyServices(context: ServiceContext) {
           );
         }
 
-        const { data: membership, error: createdMembershipError } = await supabase
-          .from("team_memberships")
-          .select("id, team_id, profile_id, created_at, removed_at")
-          .eq("team_id", updatedInviteRow.team_id)
-          .eq("profile_id", profile.id)
-          .is("removed_at", null)
-          .single();
+        const membership = await findActiveMembershipByTeamAndProfile(supabase, {
+          teamId: updatedInviteRow.team_id,
+          profileId: profile.id,
+        });
 
-        if (createdMembershipError) {
-          throw new BondifyServiceError("TEAM_ACCESS_DENIED", createdMembershipError.message, {
+        if (!membership) {
+          throw new BondifyServiceError("TEAM_ACCESS_DENIED", "You do not have access to this team.", {
             teamId: updatedInviteRow.team_id,
             profileId: profile.id,
           });
@@ -2440,7 +2645,7 @@ export function createBondifyServices(context: ServiceContext) {
           });
         }
 
-        const roundRow: GameRoundWithTemplateRow = round;
+        const roundRow = normalizeGameRoundWithTemplateRow(round);
         if (isTwoTruthsTemplateSlug(roundRow.game_template.slug)) {
           throw new BondifyServiceError(
             "LEGACY_TWO_TRUTHS_TEMPLATE_NOT_SUPPORTED",
@@ -2522,7 +2727,7 @@ export function createBondifyServices(context: ServiceContext) {
           throw new BondifyServiceError("ROUND_NOT_FOUND", revealedRoundError.message, { roundId: input.roundId });
         }
 
-        return toParticipantSafeRoundReveal(revealedRound);
+        return toParticipantSafeRoundReveal(normalizeGameRoundWithTemplateRow(revealedRound));
       });
     },
 
@@ -3084,7 +3289,7 @@ export function createBondifyServices(context: ServiceContext) {
           throw new BondifyServiceError("ROUND_NOT_FOUND", "Round not found.", { roundId });
         }
 
-        const roundRow: GameRoundWithTemplateRow = data;
+        const roundRow = normalizeGameRoundWithTemplateRow(data);
         await requireMembershipAccess(supabase, roundRow.team_id, profile.id);
 
         if (roundRow.status !== "revealed") {
