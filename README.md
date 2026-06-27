@@ -21,7 +21,7 @@ This repository contains the Bondify Astro application and the supporting planni
 - Astro app is scaffolded and configured for SSR on Cloudflare Workers
 - Product and stack planning docs are in place under `context/`
 - First production deployment is live at `https://bondify.witkos4.workers.dev`
-- Cloudflare-managed production deploys from `master` are enabled
+- Cloudflare-managed production deploys from `main` are enabled
 
 ## Planned Stack
 
@@ -35,7 +35,7 @@ This repository contains the Bondify Astro application and the supporting planni
 
 - Runtime and deploy target: Cloudflare Workers
 - First production release: manual deploy to `*.workers.dev` via `wrangler`
-- Ongoing production deploys: Cloudflare Workers Builds / Git integration on pushes to `master`
+- Ongoing production deploys: Cloudflare Workers Builds / Git integration on pushes to `main`
 - GitHub Actions role: CI only (`lint` and `build`), not release execution
 - Worker URL behavior: `workers_dev` and preview URLs are explicitly enabled in `wrangler.jsonc`
 
