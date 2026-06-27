@@ -10,8 +10,8 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 26.2.0
           cache: npm
@@ -22,3 +22,22 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      - name: Start local Supabase stack
+        run: npx supabase start
+      - name: Set Supabase test credentials
+        run: |
+          STATUS=$(npx supabase status -o env 2>/dev/null)
+          get() { echo "$STATUS" | grep "^$1=" | cut -d= -f2-; }
+          {
+            echo "BONDIFY_TEST_SUPABASE_URL=$(get API_URL)"
+            echo "BONDIFY_TEST_ANON_KEY=$(get ANON_KEY)"
+            echo "BONDIFY_TEST_SERVICE_ROLE_KEY=$(get SERVICE_ROLE_KEY)"
+            echo "SUPABASE_URL=$(get API_URL)"
+            echo "SUPABASE_KEY=$(get ANON_KEY)"
+          } >> "$GITHUB_ENV"
+      - name: Run unit + integration tests
+        run: npm test
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run Playwright E2E tests
+        run: npm run test:e2e

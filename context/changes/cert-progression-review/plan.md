@@ -40,7 +40,7 @@ Verify: open the Actions tab → `CI` green on `main`; open the demo PR → revi
 
 ## What We're NOT Doing
 
-- **Not** making any check a *required* merge-blocking gate (no branch-protection rule) before submission — the verdict status is posted but advisory; revisit after 2026-07-05.
+- **Not** making any check a _required_ merge-blocking gate (no branch-protection rule) before submission — the verdict status is posted but advisory; revisit after 2026-07-05.
 - **Not** migrating history to a `master` branch — `main` is the canonical default.
 - **Not** auto-reviewing every PR — the Champion pipeline stays gated on the `ai-cr:review` label to control cost.
 - **Not** adding Phase 2/3 of the test-plan rollout (game-rule, owner-action test phases) — separate changes.
@@ -53,7 +53,7 @@ Strictly sequence the prerequisite (Phase 0) first: until the trigger points at 
 
 ## Critical Implementation Details
 
-- **Timing & lifecycle (Phase 1):** the credential-injection step must run *after* `supabase start` (the stack must be up to emit `supabase status -o env`) and *before* both `npm test` and `npm run test:e2e`. Writing the vars to `$GITHUB_ENV` makes them visible to all later steps, including the Playwright `webServer` that boots `dev:local`. The app server reads `SUPABASE_URL`/`SUPABASE_KEY` via `astro:env`; the test helpers read `BONDIFY_TEST_*` — both must be exported from the local stack's values, not the production secrets.
+- **Timing & lifecycle (Phase 1):** the credential-injection step must run _after_ `supabase start` (the stack must be up to emit `supabase status -o env`) and _before_ both `npm test` and `npm run test:e2e`. Writing the vars to `$GITHUB_ENV` makes them visible to all later steps, including the Playwright `webServer` that boots `dev:local`. The app server reads `SUPABASE_URL`/`SUPABASE_KEY` via `astro:env`; the test helpers read `BONDIFY_TEST_*` — both must be exported from the local stack's values, not the production secrets.
 - **Diff range (Phase 2):** the review workflow must checkout with `fetch-depth: 0` and diff with the three-dot range `origin/${base}...HEAD` — a shallow checkout leaves nothing to diff against, and the two-dot range includes unrelated base-branch churn.
 - **Cost guard (Phase 2):** the review script makes a single bounded Anthropic call (capped `max_tokens`, no agent loop). On CI, cost multiplies per PR — never run an unbounded loop. The `ai-cr:review` label gate is the second cost control.
 - **First-run fragility (Phase 0):** because CI has literally never run, treat the first green run as a real deliverable, not a formality. The build's Supabase secrets are optional (`astro.config.mjs:21-22`), so missing secrets should NOT redden it — but other latent issues (lint, `astro sync`, the Cloudflare adapter) could surface for the first time.
@@ -304,7 +304,7 @@ Three small edits closing Level 3.C, 3.D, 3.E.
 
 ### Integration Tests:
 
-The existing Vitest suite (`smoke`, `harness`, `access-grants`, `cross-team-denial`, `bondify-compatibility`, `emoji-check-in-picker.contract`) is the verification for Phase 1's CI wiring — its green run in CI *is* the deliverable.
+The existing Vitest suite (`smoke`, `harness`, `access-grants`, `cross-team-denial`, `bondify-compatibility`, `emoji-check-in-picker.contract`) is the verification for Phase 1's CI wiring — its green run in CI _is_ the deliverable.
 
 ### E2E Tests:
 
@@ -340,9 +340,9 @@ The existing Vitest suite (`smoke`, `harness`, `access-grants`, `cross-team-deni
 
 #### Automated
 
-- [ ] 0.1 `gh run list --branch main` shows a `CI` run after the push
-- [ ] 0.2 Latest `CI` run on `main` concludes `success`
-- [ ] 0.3 `lint` and `build` steps green in that run
+- [x] 0.1 `gh run list --branch main` shows a `CI` run after the push
+- [x] 0.2 Latest `CI` run on `main` concludes `success`
+- [x] 0.3 `lint` and `build` steps green in that run
 
 #### Manual
 
