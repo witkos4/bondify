@@ -1,0 +1,14 @@
+diff --git a/src/pages/api/search.ts b/src/pages/api/search.ts
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/src/pages/api/search.ts
+@@
++import type { APIRoute } from "astro";
++import { db } from "@/lib/db";
++
++export const POST: APIRoute = async ({ request }) => {
++  const { email } = await request.json();
++  const rows = await db.query(`select * from profiles where email = '${email}'`);
++  return Response.json({ rows });
++};

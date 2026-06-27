@@ -1,0 +1,91 @@
+name: AI Code Review
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, labeled]
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: Base branch to diff against
+        required: false
+        default: main
+      pr_number:
+        description: Optional PR number for comment/label publishing
+        required: false
+
+permissions: {}
+
+jobs:
+  review:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'ai-cr:review')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      statuses: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 26.2.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compute PR diff
+        id: diff
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref || github.event.inputs.base_ref || 'main' }}
+        run: |
+          git fetch origin "$BASE_REF" --depth=1
+          git diff "origin/${BASE_REF}...HEAD" > pr.diff
+          echo "diff_file=pr.diff" >> "$GITHUB_OUTPUT"
+
+      - name: Run AI review
+        id: review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_BODY: ${{ github.event.pull_request.body || '' }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+          PR_TITLE: ${{ github.event.pull_request.title || github.event.head_commit.message || 'Manual AI review' }}
+          REVIEW_DIFF_FILE: ${{ steps.diff.outputs.diff_file }}
+        run: npm run review
+
+      - name: Publish verdict label and status
+        if: always() && steps.review.outputs.verdict != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          VERDICT: ${{ steps.review.outputs.verdict }}
+        run: |
+          if [ "$VERDICT" = "APPROVED" ]; then
+            STATE="success"
+            LABEL="ai-cr:passed"
+            REMOVE_LABEL="ai-cr:failed"
+          else
+            STATE="failure"
+            LABEL="ai-cr:failed"
+            REMOVE_LABEL="ai-cr:passed"
+          fi
+
+          if [ -n "$PR_NUMBER" ]; then
+            gh label create "ai-cr:passed" --color "2da44e" --description "AI review approved" --force
+            gh label create "ai-cr:failed" --color "cf222e" --description "AI review needs attention" --force
+            gh pr edit "$PR_NUMBER" --add-label "$LABEL"
+            gh pr edit "$PR_NUMBER" --remove-label "$REMOVE_LABEL" || true
+          fi
+
+          gh api --method POST "repos/{owner}/{repo}/statuses/${HEAD_SHA}" \
+            -f state="$STATE" \
+            -f context="ai-code-review/verdict" \
+            -f description="AI review: ${VERDICT}" \
+            -f target_url="$RUN_URL" > /dev/null

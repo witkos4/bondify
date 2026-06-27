@@ -354,9 +354,9 @@ The existing Vitest suite (`smoke`, `harness`, `access-grants`, `cross-team-deni
 
 #### Automated
 
-- [ ] 1.1 CI green with all 6 Vitest files passing in `Run unit + integration tests`
-- [ ] 1.2 Playwright step shows both `*.spec.ts` files passing
-- [ ] 1.3 `lint` and `build` still pass (no regression)
+- [x] 1.1 CI green with all 6 Vitest files passing in `Run unit + integration tests`
+- [x] 1.2 Playwright step shows both `*.spec.ts` files passing
+- [x] 1.3 `lint` and `build` still pass (no regression)
 
 #### Manual
 
@@ -371,7 +371,7 @@ The existing Vitest suite (`smoke`, `harness`, `access-grants`, `cross-team-deni
 - [ ] 2.1 `npm run review` runs end-to-end against a sample diff and emits a parseable JSON verdict
 - [ ] 2.2 `npx promptfoo eval` exits green against fixtures (same `prompts/review.txt`)
 - [ ] 2.3 `review.yml` is active (`gh workflow view "AI Code Review"`)
-- [ ] 2.4 Every `uses:` in `review.yml` pinned to a 40-char SHA
+- [x] 2.4 Every `uses:` in `review.yml` pinned to a 40-char SHA
 
 #### Manual
 
