@@ -188,7 +188,8 @@ the relevant rollout phase ships; before that, the sub-section reads
   `BONDIFY_TEST_ANON_KEY` from `ANON_KEY`,
   `BONDIFY_TEST_SERVICE_ROLE_KEY` from `SERVICE_ROLE_KEY`,
   `SUPABASE_URL` from `API_URL`, and `SUPABASE_KEY` from `ANON_KEY`.
-  Use `cut -d= -f2-` so JWT values keep embedded `=` characters.
+  Use `cut -d= -f2-` so JWT values keep embedded `=` characters, then strip
+  the single or double quotes emitted by `supabase status -o env`.
 - Run `npm test` after credential injection. The global test setup exits early
   when the three `BONDIFY_TEST_*` values are already present, so the test
   process does not need to shell out for Supabase status again.
