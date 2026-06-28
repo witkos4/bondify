@@ -13,7 +13,7 @@ archived_at: null
 - Target: Level 3 + 10xChampion badge. Submission deadline 2026-07-05.
 - See frame.md for the complete gap analysis and prioritized action list.
 - Phase 0 runtime credential finding: ongoing deploys are documented as Cloudflare Workers Builds / Git integration, not a GitHub deploy job. `SUPABASE_URL` and `SUPABASE_KEY` therefore belong in Cloudflare Workers runtime/build environment settings; the GitHub Actions `ci.yml` build env only references optional build-time secrets and is not the production runtime source.
-- Phase 2 CI review prerequisites: set `ANTHROPIC_API_KEY` as a GitHub Actions secret before running the `AI Code Review` workflow on a labeled PR. For promptfoo regression checks, provide `OPENROUTER_API_KEY` locally/CI before `npx promptfoo eval`; leave `PROMPTFOO_PASS_RATE_THRESHOLD` unset for the default all-tests-must-pass gate unless a noisy eval set is intentionally being triaged.
+- Phase 2 CI review prerequisites: set `OPENROUTER_API_KEY` as a GitHub Actions secret before running the `AI Code Review` workflow on a labeled PR. The same key is used locally/CI for `npx promptfoo eval`; leave `PROMPTFOO_PASS_RATE_THRESHOLD` unset for the default all-tests-must-pass gate unless a noisy eval set is intentionally being triaged.
 
 ## Resume checkpoint — 2026-06-27
 
@@ -23,7 +23,7 @@ archived_at: null
   - `ab7ab4b` Phase 1 initial CI test wiring; CI run `28291709909` failed because `supabase status -o env` values kept wrapping quotes.
   - `7488a88` Phase 1 quote-normalization fix; CI run `28291807498` green with 6 Vitest files / 20 tests and 5 Playwright tests.
   - `1a6d034` Phase 2 review pipeline; `AI Code Review` workflow registered (`review.yml`, workflow id `303220392`) and normal CI run `28292116378` green.
-- Still pending because API keys / human evidence are required: Phase 0 manual Cloudflare checks; Phase 1 manual log review rows; Phase 2 real `ANTHROPIC_API_KEY` review run, `OPENROUTER_API_KEY` promptfoo eval, demo PR screenshots and quality review.
+- Still pending because API keys / human evidence are required: Phase 0 manual Cloudflare checks; Phase 1 manual log review rows; Phase 2 real `OPENROUTER_API_KEY` review run, promptfoo eval, demo PR screenshots and quality review.
 - Local uncommitted Phase 3 work started:
   - `context/foundation/lessons.md` has the third lesson, "CI Configured Is Not CI Running".
   - `AGENTS.md` should contain the bottom "What AI agents must NOT do" section; verify before staging because `git status` did not show it as dirty in this pause snapshot.
@@ -53,5 +53,13 @@ archived_at: null
 - Verified `context/changes/cert-ci-test-gate/change.md` is `status: superseded`.
 - Visually inspected `docs/shared-reveal.png`; it clearly shows the Two Truths shared reveal state with 2/2 votes, scoring, and both final reveal cards.
 - Reviewed the third lesson and accepted it as a reusable rule.
-- `gh secret list` returned no repository secrets, and `gh workflow view "AI Code Review"` showed 0 runs. Real Anthropic review, promptfoo, and demo-PR evidence remain blocked on API keys.
+- `gh secret list` returned no repository secrets, and `gh workflow view "AI Code Review"` showed 0 runs. Real OpenRouter review, promptfoo, and demo-PR evidence remain blocked on API keys.
 - `npx wrangler deployments list` could not run non-interactively without `CLOUDFLARE_API_TOKEN`; Cloudflare dashboard/runtime-secret checks remain manual. See `manual-checks.md`.
+
+## OpenRouter update — 2026-06-28
+
+- Replaced the direct Anthropic SDK review path with OpenRouter's OpenAI-compatible chat completions endpoint.
+- The default review model is now `z-ai/glm-5.2`; override with `OPENROUTER_MODEL` if needed.
+- The `AI Code Review` workflow now expects `OPENROUTER_API_KEY` instead of `ANTHROPIC_API_KEY`.
+- `promptfooconfig.yaml` now uses the same `openrouter:z-ai/glm-5.2` provider as the workflow.
+- User confirmed Cloudflare Workers Builds watches `main`; the Cloudflare deployment history and production runtime secrets still need dashboard/API-token verification.

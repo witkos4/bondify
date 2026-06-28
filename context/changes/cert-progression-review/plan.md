@@ -11,7 +11,7 @@ This plan **supersedes** `context/changes/cert-ci-test-gate/` — that plan's `n
 Verified 2026-06-27 against the live repo and GitHub API (see `frame.md`):
 
 - **CI has never run.** `gh api .../actions/runs` returns `total_count: 0`. `.github/workflows/ci.yml` triggers on `branches: [master]`, but the repo's only branch is `main` (`origin/HEAD → main`; no `master` anywhere). The workflow is registered and active but has never fired.
-- **No repo Actions secrets exist** (`gh secret list` is empty). The current build step references `secrets.SUPABASE_URL` / `secrets.SUPABASE_KEY`, which are unset — so the first real CI run may fail at build, and `ANTHROPIC_API_KEY` (needed for Phase 2) is absent.
+- **No repo Actions secrets exist** (`gh secret list` is empty). The current build step references `secrets.SUPABASE_URL` / `secrets.SUPABASE_KEY`, which are unset — so the first real CI run may fail at build, and `OPENROUTER_API_KEY` (needed for Phase 2) is absent.
 - **No branch protection on `main`** (`404 Branch not protected`).
 - `ci.yml` runs `npm ci → npx astro sync → npm run lint → npm run build`. No `npm test`.
 - Test suite is rich and passes locally: 6 Vitest integration files (`tests/**/*.test.ts`) + 2 new Playwright specs (`tests/browser/*.spec.ts`).
@@ -26,12 +26,12 @@ Verified 2026-06-27 against the live repo and GitHub API (see `frame.md`):
 - `tests/setup/global.ts` → `ensureLocalSupabaseTestEnv()` short-circuits when `BONDIFY_TEST_SUPABASE_URL` / `BONDIFY_TEST_ANON_KEY` / `BONDIFY_TEST_SERVICE_ROLE_KEY` are already set (`tests/helpers/supabase-env.ts:43-47`) — CI only needs to inject those three; no test-helper changes.
 - Playwright specs create users dynamically through the admin-client fixture helpers (`tests/browser/two-truths-round.spec.ts` uses `inviteToTeamAs`, `signInAs`); `supabase/seed.sql` seeds **no** auth users. So Playwright-in-CI needs: local Supabase up, the same `BONDIFY_TEST_*` creds the Vitest helpers use, the `dev:local` app server pointed at that same local Supabase (`SUPABASE_URL`/`SUPABASE_KEY`), and installed browsers.
 - `playwright.config.ts` auto-starts the app via `webServer.command: npm run dev:local -- --host 127.0.0.1 --port 4323` with `reuseExistingServer: true`; baseURL `http://127.0.0.1:4323`.
-- The skill template (`workflow-template.yml`) is **pnpm-based, gated on the `impl-review` label, uses `claude-opus-4-7`, and pins actions to floating major tags** — Phase 2 adapts it to npm, Opus 4.8, and SHA pins. It mounts the skill from the PR's **base** branch into `$HOME/.claude/skills/` (user-level) because `claude-code-action@v1` quarantines the repo's `.claude/` from untrusted PR heads.
+- The skill template (`workflow-template.yml`) is **pnpm-based, gated on the `impl-review` label, uses a Claude Code Action flow, and pins actions to floating major tags** — Phase 2 adapts it to npm, the custom OpenRouter review script, and SHA pins. It mounts the skill from the PR's **base** branch into `$HOME/.claude/skills/` (user-level) because `claude-code-action@v1` quarantines the repo's `.claude/` from untrusted PR heads.
 
 ## Desired End State
 
 - The `CI` workflow fires on every push/PR to `main`, runs `lint → build → Vitest → Playwright`, and is **green on `main`** (verifiable in the Actions tab; `gh run list` shows passing runs).
-- An `AI Code Review` workflow runs a custom review script (Anthropic API, Opus 4.8, prompt `prompts/review.txt`) against any PR labeled `ai-cr:review`, posts an LLM review comment + verdict label/status, and a dedicated demo PR has captured the three Champion-badge screenshots (pipeline view + job logs + review comment).
+- An `AI Code Review` workflow runs a custom review script (OpenRouter API, default model `z-ai/glm-5.2`, prompt `prompts/review.txt`) against any PR labeled `ai-cr:review`, posts an LLM review comment + verdict label/status, and a dedicated demo PR has captured the three Champion-badge screenshots (pipeline view + job logs + review comment).
 - A promptfoo regression gate (`promptfooconfig.yaml` + fixtures) exercises the **same** `prompts/review.txt` and passes via `npx promptfoo eval`.
 - `lessons.md` has ≥3 lessons; `AGENTS.md` ends with a "must NOT do" section; README shows the shared-reveal screenshot and points to `main`.
 - The Cloudflare Workers Builds branch is confirmed (manually) to watch `main`.
@@ -55,7 +55,7 @@ Strictly sequence the prerequisite (Phase 0) first: until the trigger points at 
 
 - **Timing & lifecycle (Phase 1):** the credential-injection step must run _after_ `supabase start` (the stack must be up to emit `supabase status -o env`) and _before_ both `npm test` and `npm run test:e2e`. Writing the vars to `$GITHUB_ENV` makes them visible to all later steps, including the Playwright `webServer` that boots `dev:local`. The app server reads `SUPABASE_URL`/`SUPABASE_KEY` via `astro:env`; the test helpers read `BONDIFY_TEST_*` — both must be exported from the local stack's values, not the production secrets.
 - **Diff range (Phase 2):** the review workflow must checkout with `fetch-depth: 0` and diff with the three-dot range `origin/${base}...HEAD` — a shallow checkout leaves nothing to diff against, and the two-dot range includes unrelated base-branch churn.
-- **Cost guard (Phase 2):** the review script makes a single bounded Anthropic call (capped `max_tokens`, no agent loop). On CI, cost multiplies per PR — never run an unbounded loop. The `ai-cr:review` label gate is the second cost control.
+- **Cost guard (Phase 2):** the review script makes a single bounded OpenRouter chat-completions call (capped `max_tokens`, no agent loop). On CI, cost multiplies per PR — never run an unbounded loop. The `ai-cr:review` label gate is the second cost control.
 - **First-run fragility (Phase 0):** because CI has literally never run, treat the first green run as a real deliverable, not a formality. The build's Supabase secrets are optional (`astro.config.mjs:21-22`), so missing secrets should NOT redden it — but other latent issues (lint, `astro sync`, the Cloudflare adapter) could surface for the first time.
 
 ---
@@ -208,7 +208,7 @@ Stand up an LLM PR-review pipeline (Level 3.B + Champion badge) built around a *
 
 **Intent**: The runnable reviewer the workflow executes and that emits the PR comment + verdict.
 
-**Contract**: `npm run review` reads PR title/body/diff from env/args, calls the Anthropic API (`claude-opus-4-8`) with `prompts/review.txt` via `@anthropic-ai/sdk` (new dependency), parses the JSON verdict, posts a PR comment via `gh`, and writes the verdict to `$GITHUB_OUTPUT`. A hard cap (bounded `max_tokens`, a single non-looping call — no unbounded agent loop) guards per-PR cost. Reads `ANTHROPIC_API_KEY`, `GH_TOKEN`.
+**Contract**: `npm run review` reads PR title/body/diff from env/args, calls OpenRouter's OpenAI-compatible chat completions API with default model `z-ai/glm-5.2` and `prompts/review.txt`, parses the JSON verdict, posts a PR comment via `gh`, and writes the verdict to `$GITHUB_OUTPUT`. A hard cap (bounded `max_tokens`, a single non-looping call — no unbounded agent loop) guards per-PR cost. Reads `OPENROUTER_API_KEY`, `GH_TOKEN`.
 
 #### 3. Review workflow
 
@@ -230,7 +230,7 @@ Stand up an LLM PR-review pipeline (Level 3.B + Champion badge) built around a *
 
 **Intent**: Regression-test the **same** `prompts/review.txt` the pipeline runs, against fixture diffs (Playbook D step 8). Badge-optional — landed after the demo PR so a deadline crunch sheds it last.
 
-**Contract**: `promptfooconfig.yaml` references `file://prompts/review.txt`, declares OpenRouter providers (`openrouter:anthropic/claude-opus-4-8` + one cheaper comparator), and defines ≥2 tests: `fixtures/sql-injection.diff` asserting `is-json` + `llm-rubric` (rejects + flags the injection) + `javascript: JSON.parse(output).score <= 3`; a clean-diff fixture asserting an APPROVED-shaped verdict. Run `npx promptfoo eval` with `OPENROUTER_API_KEY` (manual prereq, documented in `change.md`). Default absolute threshold; document the `PROMPTFOO_PASS_RATE_THRESHOLD` escape hatch.
+**Contract**: `promptfooconfig.yaml` references `file://prompts/review.txt`, declares the OpenRouter provider `openrouter:z-ai/glm-5.2`, and defines ≥2 tests: `fixtures/sql-injection.diff` asserting `is-json` + `llm-rubric` (rejects + flags the injection) + `javascript: JSON.parse(output).score <= 3`; a clean-diff fixture asserting an APPROVED-shaped verdict. Run `npx promptfoo eval` with `OPENROUTER_API_KEY` (manual prereq, documented in `change.md`). Default absolute threshold; document the `PROMPTFOO_PASS_RATE_THRESHOLD` escape hatch.
 
 ### Success Criteria:
 
@@ -245,7 +245,7 @@ Stand up an LLM PR-review pipeline (Level 3.B + Champion badge) built around a *
 
 - On the demo PR, the review posts a comment with a verdict + per-file findings, and the verdict label/status appears
 - The three badge screenshots are captured and saved under `evidence/`
-- The review comment quality is acceptable (Opus 4.8 output reads as a real review, not a stub)
+- The review comment quality is acceptable (GLM 5.2 output reads as a real review, not a stub)
 
 **Implementation Note**: Pause for human confirmation after the demo PR run — the screenshots are the badge deliverable and need a human eye.
 

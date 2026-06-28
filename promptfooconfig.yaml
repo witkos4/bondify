@@ -4,8 +4,7 @@ prompts:
   - file://prompts/review.txt
 
 providers:
-  - id: openrouter:anthropic/claude-opus-4-8
-  - id: openrouter:anthropic/claude-haiku-4.5
+  - id: openrouter:z-ai/glm-5.2
 
 tests:
   - description: rejects an unsafe SQL interpolation

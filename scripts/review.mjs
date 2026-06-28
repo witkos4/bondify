@@ -1,6 +1,5 @@
 /* global console */
 /* eslint-disable no-console, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-argument, @typescript-eslint/restrict-plus-operands, @typescript-eslint/prefer-nullish-coalescing, @typescript-eslint/use-unknown-in-catch-callback-variable -- CLI script bridges untyped env, JSON, and gh output boundaries. */
-import Anthropic from "@anthropic-ai/sdk";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { appendFile } from "node:fs/promises";
@@ -8,7 +7,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
 
-const DEFAULT_MODEL = "claude-opus-4-8";
+const DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
+const DEFAULT_MODEL = "z-ai/glm-5.2";
 const DEFAULT_MAX_TOKENS = 1800;
 const VALID_VERDICTS = new Set(["APPROVED", "NEEDS ATTENTION", "REJECTED"]);
 
@@ -97,30 +97,51 @@ function validateVerdict(parsed) {
   };
 }
 
-async function callAnthropic(prompt) {
+async function callOpenRouter(prompt) {
   const mockResponse = process.env.REVIEW_MOCK_RESPONSE;
   if (mockResponse) {
     return mockResponse;
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    throw new Error("ANTHROPIC_API_KEY is required unless REVIEW_MOCK_RESPONSE is set.");
+    throw new Error("OPENROUTER_API_KEY is required unless REVIEW_MOCK_RESPONSE is set.");
   }
 
-  const anthropic = new Anthropic({ apiKey });
-  const response = await anthropic.messages.create({
-    model: process.env.ANTHROPIC_MODEL ?? DEFAULT_MODEL,
-    max_tokens: Number.parseInt(process.env.REVIEW_MAX_TOKENS ?? `${DEFAULT_MAX_TOKENS}`, 10),
-    temperature: 0,
-    system: "Return only strict JSON. Do not include Markdown fences or prose outside the JSON object.",
-    messages: [{ role: "user", content: prompt }],
+  const baseUrl = process.env.OPENROUTER_BASE_URL ?? DEFAULT_OPENROUTER_BASE_URL;
+  const response = await globalThis.fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": process.env.OPENROUTER_SITE_URL ?? "https://github.com/witkos4/bondify",
+      "X-Title": process.env.OPENROUTER_APP_TITLE ?? "Bondify AI Code Review",
+    },
+    body: JSON.stringify({
+      model: process.env.OPENROUTER_MODEL ?? DEFAULT_MODEL,
+      max_tokens: Number.parseInt(process.env.REVIEW_MAX_TOKENS ?? `${DEFAULT_MAX_TOKENS}`, 10),
+      temperature: 0,
+      messages: [
+        {
+          role: "system",
+          content: "Return only strict JSON. Do not include Markdown fences or prose outside the JSON object.",
+        },
+        { role: "user", content: prompt },
+      ],
+    }),
   });
 
-  return response.content
-    .filter((block) => block.type === "text")
-    .map((block) => block.text)
-    .join("\n");
+  if (!response.ok) {
+    throw new Error(`OpenRouter request failed: ${response.status} ${await response.text()}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (typeof content !== "string" || !content.trim()) {
+    throw new Error("OpenRouter response did not include message content.");
+  }
+
+  return content;
 }
 
 function formatComment(result) {
@@ -195,7 +216,7 @@ async function main() {
 
   const template = readFileSync(new URL("../prompts/review.txt", import.meta.url), "utf8");
   const prompt = renderPrompt(template, { title, body, diff });
-  const rawResponse = await callAnthropic(prompt);
+  const rawResponse = await callOpenRouter(prompt);
   const result = validateVerdict(parseJsonFromText(rawResponse));
   const comment = formatComment(result);
   const shouldComment = args["no-comment"] !== "true";
