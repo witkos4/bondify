@@ -346,9 +346,9 @@ The existing Vitest suite (`smoke`, `harness`, `access-grants`, `cross-team-deni
 
 #### Manual
 
-- [ ] 0.4 Cloudflare Workers Builds branch confirmed to watch `main`; push produces a deploy
+- [x] 0.4 Cloudflare Workers Builds branch confirmed to watch `main`; push produces a deploy
 - [x] 0.5 Live URL still serves the app after a `main` push
-- [ ] 0.6 Runtime cred source confirmed; `SUPABASE_URL`/`SUPABASE_KEY` set in the correct location
+- [x] 0.6 Runtime cred source confirmed; `SUPABASE_URL`/`SUPABASE_KEY` set in the correct location
 
 ### Phase 1: Wire the test suite into CI
 
@@ -368,16 +368,16 @@ The existing Vitest suite (`smoke`, `harness`, `access-grants`, `cross-team-deni
 
 #### Automated
 
-- [ ] 2.1 `npm run review` runs end-to-end against a sample diff and emits a parseable JSON verdict
+- [x] 2.1 `npm run review` runs end-to-end against a sample diff and emits a parseable JSON verdict
 - [ ] 2.2 `npx promptfoo eval` exits green against fixtures (same `prompts/review.txt`)
 - [x] 2.3 `review.yml` is active (`gh workflow view "AI Code Review"`)
 - [x] 2.4 Every `uses:` in `review.yml` pinned to a 40-char SHA
 
 #### Manual
 
-- [ ] 2.5 Demo PR: review posts comment with verdict + per-file findings + verdict label/status
-- [ ] 2.6 Three badge screenshots saved under `evidence/`
-- [ ] 2.7 Review comment quality acceptable (real review, not a stub)
+- [x] 2.5 Demo PR: review posts comment with verdict + per-file findings + verdict label/status
+- [x] 2.6 Three badge screenshots saved under `evidence/`
+- [x] 2.7 Review comment quality acceptable (real review, not a stub)
 
 ### Phase 3: Documentation fixes
 

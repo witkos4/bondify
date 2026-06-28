@@ -4,7 +4,7 @@ Use this checklist for the items Codex cannot verify without Cloudflare dashboar
 
 ## Cloudflare Workers Builds
 
-You already confirmed the watch branch is `main`. The remaining Cloudflare Builds check is the deployment record.
+Status: confirmed. You confirmed the watch branch is `main`, and the demo PR produced a successful Cloudflare Workers Builds deployment comment.
 
 1. Open `https://dash.cloudflare.com/` and choose the account that owns `witkos4.workers.dev`.
 2. In the left navigation, open **Workers & Pages**.
@@ -13,6 +13,10 @@ You already confirmed the watch branch is `main`. The remaining Cloudflare Build
 5. Confirm there is a successful production deployment from branch `main` after the latest main-branch push.
 
 ## Cloudflare Runtime Secrets
+
+Status: confirmed by user. `SUPABASE_URL` and `SUPABASE_KEY` are set in Cloudflare, which is the correct production runtime location.
+
+Reference path if this needs to be checked again:
 
 1. In the same **bondify** Worker/project, open **Settings**.
 2. Open **Variables and Secrets**.
@@ -25,18 +29,20 @@ You already confirmed the watch branch is `main`. The remaining Cloudflare Build
 
 ## GitHub Secret For AI Review
 
+Status: confirmed. `OPENROUTER_API_KEY` exists as a GitHub Actions repository secret.
+
+Reference path if this needs to be checked again:
+
 1. Open `https://github.com/witkos4/bondify`.
 2. Open **Settings**.
 3. Open **Secrets and variables**.
 4. Open **Actions**.
 5. Open the **Secrets** tab, then check **Repository secrets**.
-6. Add a repository secret named `OPENROUTER_API_KEY`.
-7. Do not add quotes around the value.
-8. Tell Codex when it is added; Codex can then create/use a demo PR, add the `ai-cr:review` label, and verify the review workflow.
+6. Look for `OPENROUTER_API_KEY`.
 
 ## Optional GitHub Supabase Secrets
 
-These are the place to check whether a GitHub repo has a base URL and Supabase key. For this project they are optional build-time values; production runtime credentials belong in Cloudflare.
+Status: not required. For this project they are optional build-time values; production runtime credentials belong in Cloudflare.
 
 1. Open `https://github.com/witkos4/bondify`.
 2. Open **Settings**.

@@ -63,3 +63,14 @@ archived_at: null
 - The `AI Code Review` workflow now expects `OPENROUTER_API_KEY` instead of `ANTHROPIC_API_KEY`.
 - `promptfooconfig.yaml` now uses the same `openrouter:z-ai/glm-5.2` provider as the workflow.
 - User confirmed Cloudflare Workers Builds watches `main`; the Cloudflare deployment history and production runtime secrets still need dashboard/API-token verification.
+
+## Evidence update — 2026-06-28
+
+- GitHub repo secret `OPENROUTER_API_KEY` exists (`gh secret list`, created 2026-06-28T18:50:11Z).
+- User confirmed `SUPABASE_URL` and `SUPABASE_KEY` are set in Cloudflare; GitHub copies are not required for the current CI path because CI uses local Supabase credentials and production runtime reads Cloudflare settings.
+- Demo PR `#9` (`ai-review-demo-openrouter`) exercised the OpenRouter-backed `AI Code Review` workflow and was closed after evidence capture.
+- Workflow run `28332679051` succeeded; job `83933469685` ran `npm run review` with `OPENROUTER_MODEL=z-ai/glm-5.2` and emitted verdict `APPROVED`, score `9`.
+- PR `#9` received the `github-actions` review comment, `ai-cr:passed` label, and `ai-code-review/verdict` success status. The GLM 5.2 comment was acceptable quality for a documentation-only demo diff.
+- Cloudflare Workers Builds posted a successful deployment comment on PR `#9` for commit `3df34306`.
+- Evidence screenshots saved under `evidence/`: `ai-review-workflow-run.png`, `ai-review-job-log.png`, and `ai-review-pr-comment.png`.
+- Remaining blocker: `npx promptfoo eval` still needs `OPENROUTER_API_KEY` available in the local shell/session or a dedicated GitHub workflow that can read the repo secret.
