@@ -6,7 +6,7 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-06-27
+> Last updated: 2026-06-28
 
 ## 1. Strategy
 
@@ -71,7 +71,7 @@ orchestrator updates Status as artifacts appear on disk.
 
 | #   | Phase name                                     | Goal (one line)                                                                                                         | Risks covered | Test types                     | Status       | Change folder                                      |
 | --- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------ | ------------ | -------------------------------------------------- |
-| 1   | Test foundation + access-control critical path | Bootstrap the test runner and local-Supabase integration harness; prove membership grants access and team scoping holds | #1, #2        | integration + unit             | implementing | context/changes/testing-foundation-access-control/ |
+| 1   | Test foundation + access-control critical path | Bootstrap the test runner and local-Supabase integration harness; prove membership grants access and team scoping holds | #1, #2        | integration + unit             | complete     | context/changes/testing-foundation-access-control/ |
 | 2   | Game-rule integrity                            | Prove the daily check-in and Two Truths rules are enforced server-side, not just in the UI                              | #3, #4        | integration + unit             | not started  | —                                                  |
 | 3   | Owner actions and destructive paths            | Prove owner-only authorization and a bounded blast radius for remove-member/delete-team                                 | #5            | integration                    | not started  | —                                                  |
 | 4   | Quality gates and environment parity           | Wire the suite into CI behind a full migration + seed replay; add a minimal landing-flow smoke probe                    | #6            | gates + migration-replay smoke | complete     | context/changes/cert-progression-review/           |

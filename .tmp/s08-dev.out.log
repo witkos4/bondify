@@ -352,3 +352,6 @@ Error: Failed to load url astro:server-app.js (resolved id: astro:server-app.js)
 [2m22:29:23[22m Configuration file updated. Restarting...
 [vite] connected.
 [2m22:29:25[22m [34m[vite][39m server restarted.
+[2m00:25:59[22m [34m[watch][39m .tmp/remote-root.html
+[2m00:25:59[22m [34m[watch][39m .tmp/remote-signin.html
+Terminate batch job (Y/N)? 

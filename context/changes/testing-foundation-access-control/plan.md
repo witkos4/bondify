@@ -335,7 +335,7 @@ None — no schema changes. The suite runs against whatever migration state is a
 
 #### Manual
 
-- [ ] 1.5 With Docker/Supabase stopped, `npm test` fails fast with the Docker/`supabase start` diagnostic
+- [x] 1.5 With Docker/Supabase stopped, `npm test` fails fast with the Docker/`supabase start` diagnostic
 
 ### Phase 2: Fixture Harness
 
@@ -347,7 +347,7 @@ None — no schema changes. The suite runs against whatever migration state is a
 
 #### Manual
 
-- [ ] 2.4 Pre-existing manual-testing data (BUBBA team, emoji history) intact after a run
+- [x] 2.4 Pre-existing manual-testing data (BUBBA team, emoji history) intact after a run
 
 ### Phase 3: Risk #1 Suite — Positive Presence
 
@@ -358,7 +358,7 @@ None — no schema changes. The suite runs against whatever migration state is a
 
 #### Manual
 
-- [ ] 3.3 Studio mutation-check: breaking/restoring `can_insert_team_membership` flips the repro test
+- [x] 3.3 Studio mutation-check: breaking/restoring `can_insert_team_membership` flips the repro test
 
 ### Phase 4: Risk #2 Suite — Cross-Team Denial
 
@@ -370,7 +370,7 @@ None — no schema changes. The suite runs against whatever migration state is a
 
 #### Manual
 
-- [ ] 4.4 Disclosure-probe verdict reviewed; follow-up decision recorded
+- [x] 4.4 Disclosure-probe verdict reviewed; follow-up decision recorded
 
 ### Phase 5: Closeout — Cookbook & Status
 
@@ -381,4 +381,4 @@ None — no schema changes. The suite runs against whatever migration state is a
 
 #### Manual
 
-- [ ] 5.3 §6.1/§6.2 cookbook entries usable by a contributor outside this session
+- [x] 5.3 §6.1/§6.2 cookbook entries usable by a contributor outside this session
