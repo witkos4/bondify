@@ -60,3 +60,5 @@ This repository contains the Bondify Astro application and the supporting planni
 ## Next Step
 
 Continue MVP feature development. For local app work, start local Supabase and run `npm run dev:local -- --host 127.0.0.1 --port 4321`.
+
+Demo note: this branch exercises the AI review workflow with OpenRouter.
