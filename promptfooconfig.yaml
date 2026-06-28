@@ -5,6 +5,11 @@ prompts:
 
 providers:
   - id: openrouter:z-ai/glm-5.2
+    config:
+      max_tokens: 1800
+      showThinking: false
+      systemPrompt: Return only strict JSON. Do not include Markdown fences, reasoning, or prose outside the JSON object.
+      temperature: 0
 
 tests:
   - description: rejects an unsafe SQL interpolation
@@ -14,10 +19,17 @@ tests:
       diff: file://fixtures/sql-injection.diff
     assert:
       - type: is-json
-      - type: llm-rubric
-        value: The verdict is REJECTED or NEEDS ATTENTION and the findings identify SQL injection risk.
       - type: javascript
-        value: JSON.parse(output).score <= 3
+        value: |
+          const parsed = JSON.parse(output);
+          const findings = Array.isArray(parsed.findings)
+            ? parsed.findings.map((finding) => `${finding.file ?? ''} ${finding.detail ?? ''}`).join(' ').toLowerCase()
+            : '';
+
+          return ['REJECTED', 'NEEDS ATTENTION'].includes(parsed.verdict)
+            && parsed.score <= 3
+            && findings.includes('sql')
+            && findings.includes('injection');
 
   - description: approves a clean README copy edit
     vars:
@@ -29,4 +41,6 @@ tests:
       - type: javascript
         value: |
           const parsed = JSON.parse(output);
-          return parsed.verdict === 'APPROVED' && parsed.score >= 7;
+          return parsed.verdict === 'APPROVED'
+            && parsed.score >= 7
+            && Array.isArray(parsed.findings);

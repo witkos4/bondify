@@ -19,4 +19,4 @@ jobs:
       - name: Run promptfoo eval
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: npx promptfoo eval
+        run: npx promptfoo@0.121.17 eval
