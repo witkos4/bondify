@@ -12,6 +12,8 @@ The MVP centers on one core flow:
 - Each participant submits one anonymous response
 - The team sees all responses together on a shared results screen
 
+![Bondify shared reveal screen](docs/shared-reveal.png)
+
 The goal is to create lightweight daily rituals that improve trust and reduce early-team friction without adding meeting overhead.
 
 ## Current Status

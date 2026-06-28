@@ -13,3 +13,9 @@
 - **Context**: Local verification for the authenticated member shell work in `S-06`, including redirects, dashboard entry, Docker/Supabase recovery after a reboot, and manual confirmation of browser-visible behavior.
 - **Problem**: Without an explicit prompt, an agent might stop after code changes or terminal checks and leave user-facing regressions undiscovered, especially when localhost failures are caused by the environment rather than the code.
 - **Rule**: After user-facing auth, dashboard, routing, or shell/navigation changes, default to local verification before declaring the work done. Prefer browser-level verification when browser tooling is available; otherwise use HTTP probes plus a focused manual checklist. If localhost appears broken, check the app server, Docker Desktop, WSL2/virtualization, and local Supabase services before assuming the implementation itself is broken.
+
+## CI Configured Is Not CI Running
+
+- **Context**: Certification gap review for Bondify found a registered GitHub Actions workflow that had never executed because it still targeted `master` while the repository default branch was `main`.
+- **Problem**: A workflow file can look complete in the repo but provide zero certification or regression value if its trigger branch does not match reality. The stale trigger blocked CI, test-in-CI, and deploy evidence even though the YAML existed.
+- **Rule**: Verify CI by checking actual runs on the default branch, not by the presence of `.github/workflows/*.yml`. Use `gh run list --branch <default>` or the Actions API run count to prove the workflow fires, then inspect the latest run's conclusion and job steps.

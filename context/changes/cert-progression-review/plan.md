@@ -347,7 +347,7 @@ The existing Vitest suite (`smoke`, `harness`, `access-grants`, `cross-team-deni
 #### Manual
 
 - [ ] 0.4 Cloudflare Workers Builds branch confirmed to watch `main`; push produces a deploy
-- [ ] 0.5 Live URL still serves the app after a `main` push
+- [x] 0.5 Live URL still serves the app after a `main` push
 - [ ] 0.6 Runtime cred source confirmed; `SUPABASE_URL`/`SUPABASE_KEY` set in the correct location
 
 ### Phase 1: Wire the test suite into CI
@@ -360,9 +360,9 @@ The existing Vitest suite (`smoke`, `harness`, `access-grants`, `cross-team-deni
 
 #### Manual
 
-- [ ] 1.4 Job log shows real Vitest test counts + chromium results
-- [ ] 1.5 `test-plan.md` §3 Phase 4 = `complete`; §6.5 recipe usable
-- [ ] 1.6 `cert-ci-test-gate/change.md` shows `superseded`
+- [x] 1.4 Job log shows real Vitest test counts + chromium results
+- [x] 1.5 `test-plan.md` §3 Phase 4 = `complete`; §6.5 recipe usable
+- [x] 1.6 `cert-ci-test-gate/change.md` shows `superseded`
 
 ### Phase 2: Champion CI/CD code-review pipeline
 
@@ -370,7 +370,7 @@ The existing Vitest suite (`smoke`, `harness`, `access-grants`, `cross-team-deni
 
 - [ ] 2.1 `npm run review` runs end-to-end against a sample diff and emits a parseable JSON verdict
 - [ ] 2.2 `npx promptfoo eval` exits green against fixtures (same `prompts/review.txt`)
-- [ ] 2.3 `review.yml` is active (`gh workflow view "AI Code Review"`)
+- [x] 2.3 `review.yml` is active (`gh workflow view "AI Code Review"`)
 - [x] 2.4 Every `uses:` in `review.yml` pinned to a 40-char SHA
 
 #### Manual
@@ -383,11 +383,11 @@ The existing Vitest suite (`smoke`, `harness`, `access-grants`, `cross-team-deni
 
 #### Automated
 
-- [ ] 3.1 `lessons.md` has 3 lesson headings
-- [ ] 3.2 `AGENTS.md` has a "must NOT do" heading after the CLI END marker
-- [ ] 3.3 README image path resolves (file exists)
+- [x] 3.1 `lessons.md` has 3 lesson headings
+- [x] 3.2 `AGENTS.md` has a "must NOT do" heading after the CLI END marker
+- [x] 3.3 README image path resolves (file exists)
 
 #### Manual
 
-- [ ] 3.4 Screenshot/GIF clearly shows the shared-reveal screen
-- [ ] 3.5 3rd lesson reads as a genuine, reusable rule
+- [x] 3.4 Screenshot/GIF clearly shows the shared-reveal screen
+- [x] 3.5 3rd lesson reads as a genuine, reusable rule
