@@ -54,8 +54,15 @@ Status: not required. For this project they are optional build-time values; prod
    - `SUPABASE_KEY`
 7. If they are absent, that is OK for current CI because the local Supabase stack provides test credentials. Add them only if you intentionally want the GitHub build step to receive hosted Supabase values.
 
-## OpenRouter Key For Promptfoo
+## Promptfoo Evaluation
 
-1. Use the same `OPENROUTER_API_KEY` as a local environment variable or GitHub Actions secret.
-2. Do not write it to `.env`, `.dev.vars`, or any tracked file.
-3. After it is available to the current shell/session, tell Codex to run `npx promptfoo eval`.
+Preferred check:
+
+1. Open GitHub -> repository -> Actions -> `Promptfoo Eval`.
+2. Click `Run workflow`, select `main`, and run it.
+3. The workflow reads the repository `OPENROUTER_API_KEY` secret. Do not paste the key into a file.
+
+Optional local check:
+
+1. Set `OPENROUTER_API_KEY` only in the current shell session.
+2. Run `npx promptfoo eval` from the repository root.

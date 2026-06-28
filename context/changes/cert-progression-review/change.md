@@ -73,4 +73,9 @@ archived_at: null
 - PR `#9` received the `github-actions` review comment, `ai-cr:passed` label, and `ai-code-review/verdict` success status. The GLM 5.2 comment was acceptable quality for a documentation-only demo diff.
 - Cloudflare Workers Builds posted a successful deployment comment on PR `#9` for commit `3df34306`.
 - Evidence screenshots saved under `evidence/`: `ai-review-workflow-run.png`, `ai-review-job-log.png`, and `ai-review-pr-comment.png`.
-- Remaining blocker: `npx promptfoo eval` still needs `OPENROUTER_API_KEY` available in the local shell/session or a dedicated GitHub workflow that can read the repo secret.
+- Promptfoo blocker resolved without exposing the key locally:
+  - Local run failed immediately because the PowerShell session had no `OPENROUTER_API_KEY`.
+  - Added a manual `Promptfoo Eval` GitHub workflow that reads the existing repository `OPENROUTER_API_KEY` secret.
+  - First workflow run `28333307848` exposed two config issues: `llm-rubric` tried to use an `OPENAI_API_KEY` grader, and promptfoo displayed OpenRouter reasoning as a `Thinking:` prefix before JSON.
+  - Fixed `promptfooconfig.yaml` by removing the extra LLM grader, adding deterministic JSON assertions, setting `showThinking: false`, and mirroring the production strict JSON system prompt.
+  - Verification run `28333422085` passed: `2 passed (100%)`, `0 failed`, `0 errors`; SQL injection fixture returned `REJECTED` score 2, clean README fixture returned `APPROVED` score 10.

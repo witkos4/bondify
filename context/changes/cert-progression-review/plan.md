@@ -230,7 +230,7 @@ Stand up an LLM PR-review pipeline (Level 3.B + Champion badge) built around a *
 
 **Intent**: Regression-test the **same** `prompts/review.txt` the pipeline runs, against fixture diffs (Playbook D step 8). Badge-optional — landed after the demo PR so a deadline crunch sheds it last.
 
-**Contract**: `promptfooconfig.yaml` references `file://prompts/review.txt`, declares the OpenRouter provider `openrouter:z-ai/glm-5.2`, and defines ≥2 tests: `fixtures/sql-injection.diff` asserting `is-json` + `llm-rubric` (rejects + flags the injection) + `javascript: JSON.parse(output).score <= 3`; a clean-diff fixture asserting an APPROVED-shaped verdict. Run `npx promptfoo eval` with `OPENROUTER_API_KEY` (manual prereq, documented in `change.md`). Default absolute threshold; document the `PROMPTFOO_PASS_RATE_THRESHOLD` escape hatch.
+**Contract**: `promptfooconfig.yaml` references `file://prompts/review.txt`, declares the OpenRouter provider `openrouter:z-ai/glm-5.2`, mirrors the production review call's strict JSON/system-prompt settings, and defines >=2 deterministic JSON-shape tests: `fixtures/sql-injection.diff` asserts `is-json`, a rejected/attention verdict, low score, and SQL injection findings; a clean-diff fixture asserts an approved verdict with findings. Run `npx promptfoo eval` with `OPENROUTER_API_KEY` locally, or run the manual `Promptfoo Eval` GitHub workflow that reads the repository secret. Default absolute threshold; document the `PROMPTFOO_PASS_RATE_THRESHOLD` escape hatch.
 
 ### Success Criteria:
 
@@ -369,7 +369,7 @@ The existing Vitest suite (`smoke`, `harness`, `access-grants`, `cross-team-deni
 #### Automated
 
 - [x] 2.1 `npm run review` runs end-to-end against a sample diff and emits a parseable JSON verdict
-- [ ] 2.2 `npx promptfoo eval` exits green against fixtures (same `prompts/review.txt`)
+- [x] 2.2 `npx promptfoo eval` exits green against fixtures (same `prompts/review.txt`)
 - [x] 2.3 `review.yml` is active (`gh workflow view "AI Code Review"`)
 - [x] 2.4 Every `uses:` in `review.yml` pinned to a 40-char SHA
 
