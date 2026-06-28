@@ -1,7 +1,7 @@
 ---
 change_id: cert-progression-review
 title: Certification progression review and gap closure plan
-status: implementing
+status: implemented
 created: 2026-06-27
 updated: 2026-06-28
 archived_at: null
@@ -79,3 +79,10 @@ archived_at: null
   - First workflow run `28333307848` exposed two config issues: `llm-rubric` tried to use an `OPENAI_API_KEY` grader, and promptfoo displayed OpenRouter reasoning as a `Thinking:` prefix before JSON.
   - Fixed `promptfooconfig.yaml` by removing the extra LLM grader, adding deterministic JSON assertions, setting `showThinking: false`, and mirroring the production strict JSON system prompt.
   - Verification run `28333422085` passed: `2 passed (100%)`, `0 failed`, `0 errors`; SQL injection fixture returned `REJECTED` score 2, clean README fixture returned `APPROVED` score 10.
+
+## Closeout update — 2026-06-28
+
+- All `plan.md` Progress rows are complete.
+- Latest `CI` on `main` for commit `a9c82fb` succeeded on rerun: run `28333521977`, job `83935920655`.
+- The first attempt of that CI run failed before tests because Docker/ECR rate-limited a Supabase image pull (`public.ecr.aws/supabase/logflare:1.39.1`, `toomanyrequests: Rate exceeded`). Rerun passed without code changes, confirming this was external/transient infrastructure, not a promptfoo or app regression.
+- Context closeout saved the certification runbook `context/foundation/checkup.md`, the final implemented status, and the prompt-eval lesson for future plans/reviews.

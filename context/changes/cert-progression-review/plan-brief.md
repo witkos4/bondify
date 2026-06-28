@@ -13,7 +13,7 @@ CI is registered but has never executed (0 runs, 0 secrets, no branch protection
 
 ## Desired End State
 
-CI fires on `main`, runs lint→build→Vitest→Playwright green. A label-gated `Impl Review` pipeline runs Opus 4.8 on PRs, posts an LLM review comment + verdict status, with badge screenshots captured from a demo PR. promptfoo regression-gates the review prompt. Docs are complete: ≥3 lessons, a "must NOT do" section, and a shared-reveal screenshot.
+CI fires on `main`, runs lint→build→Vitest→Playwright green. A label-gated `AI Code Review` pipeline runs OpenRouter `z-ai/glm-5.2` on PRs, posts an LLM review comment + verdict label/status, with badge screenshots captured from a demo PR. promptfoo regression-gates the same review prompt. Docs are complete: ≥3 lessons, a "must NOT do" section, and a shared-reveal screenshot.
 
 ## Key Decisions Made
 
@@ -25,7 +25,7 @@ CI fires on `main`, runs lint→build→Vitest→Playwright green. A label-gated
 | Supabase in CI | `npx supabase start` (devDependency) | One fewer action to pin; version already locked | Plan |
 | CI job shape | Single job, append test steps | Simplest; matches existing workflow | Plan |
 | Playwright in CI | Yes, alongside Vitest | Stronger 2.D evidence (overrides test-plan §4 deferral) | Plan |
-| Review-agent model | Opus 4.8 | Sharpest findings + best badge artifact; PR volume ~nil | Plan |
+| Review-agent model | OpenRouter `z-ai/glm-5.2` | User-provisioned provider/model; bounded custom review script keeps promptfoo and CI on the same prompt | Implementation update |
 | Pipeline implementation | Custom review script (`npm run review`) | One prompt promptfoo can regression-gate, vs. action+skill where the gate tested a parallel prompt | Plan-review F1 (Fix B) |
 | promptfoo | Include now, wired to the live prompt | Full Playbook D coverage that guards the prompt that actually ships | Plan |
 | Merge gate | Advisory until after submission | Avoid self-blocking pre-deadline merges | Plan |
@@ -33,7 +33,7 @@ CI fires on `main`, runs lint→build→Vitest→Playwright green. A label-gated
 
 ## Scope
 
-**In scope:** CI trigger fix + first green run; Vitest + Playwright in CI; Champion review pipeline (`impl-review.yml`, Opus 4.8, SHA-pinned, label-gated); promptfoo gate; demo PR evidence; 3rd lesson; AGENTS.md "must NOT do"; README screenshot.
+**In scope:** CI trigger fix + first green run; Vitest + Playwright in CI; Champion review pipeline (`review.yml`, OpenRouter `z-ai/glm-5.2`, SHA-pinned, label-gated); promptfoo gate; demo PR evidence; 3rd lesson; AGENTS.md "must NOT do"; README screenshot.
 
 **Out of scope:** branch-protection/required checks (deferred post-submission); a `master` branch; test-plan rollout Phases 2–3; test-code changes; Docker image caching.
 
@@ -47,10 +47,10 @@ Phase 0 (prerequisite) repoints the trigger and gets CI green. Phases 1 (`ci.yml
 | --- | --- | --- |
 | 0. Repoint + first green run | CI actually runs and is green on `main` | First-ever run surfaces latent build/secret failures |
 | 1. Tests in CI | Vitest + Playwright green in CI | Playwright needs `dev:local` wired to local Supabase + browsers |
-| 2. Champion pipeline | Custom review script + workflow + promptfoo + badge screenshots | Larger build (review script + SDK dep); cost guard; two API keys |
+| 2. Champion pipeline | Custom review script + workflow + promptfoo + badge screenshots | Larger build; OpenRouter key required; label gate and bounded call guard cost |
 | 3. Doc fixes | 3rd lesson, AGENTS.md bottom, README shot | Trivial; screenshot needs a manual capture |
 
-**Prerequisites:** user-supplied `SUPABASE_URL`/`SUPABASE_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY` secrets; Cloudflare dashboard access to verify the deploy branch.
+**Prerequisites:** GitHub Actions `OPENROUTER_API_KEY` for the AI review/promptfoo workflows; Cloudflare dashboard access to verify the deploy branch and confirm production `SUPABASE_URL`/`SUPABASE_KEY` live in Cloudflare. GitHub Supabase secrets are optional for this CI design.
 **Estimated effort:** ~2–3 sessions across the four phases; Phase 2 is the largest.
 
 ## Open Risks & Assumptions

@@ -19,3 +19,9 @@
 - **Context**: Certification gap review for Bondify found a registered GitHub Actions workflow that had never executed because it still targeted `master` while the repository default branch was `main`.
 - **Problem**: A workflow file can look complete in the repo but provide zero certification or regression value if its trigger branch does not match reality. The stale trigger blocked CI, test-in-CI, and deploy evidence even though the YAML existed.
 - **Rule**: Verify CI by checking actual runs on the default branch, not by the presence of `.github/workflows/*.yml`. Use `gh run list --branch <default>` or the Actions API run count to prove the workflow fires, then inspect the latest run's conclusion and job steps.
+
+## Mirror Production Calls In Prompt Evals
+
+- **Context**: Promptfoo and other LLM regression gates for CI review prompts or any structured LLM output contract.
+- **Problem**: The eval can fail for reasons the production path does not share, or pass while testing a different behavior. In the OpenRouter review gate, promptfoo originally used an `llm-rubric` assertion that required a separate OpenAI grader key and exposed OpenRouter reasoning as a `Thinking:` prefix before JSON, while the production script used deterministic JSON parsing and a strict system prompt.
+- **Rule**: Keep prompt regression gates wired to the same prompt, provider/model, system prompt, output-shaping settings, and parser semantics as production. For structured JSON outputs, prefer deterministic assertions over a second LLM grader unless the grader provider, model, and key are deliberately configured.

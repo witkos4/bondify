@@ -36,7 +36,7 @@ Verified 2026-06-27 against the live repo and GitHub API (see `frame.md`):
 - `lessons.md` has ≥3 lessons; `AGENTS.md` ends with a "must NOT do" section; README shows the shared-reveal screenshot and points to `main`.
 - The Cloudflare Workers Builds branch is confirmed (manually) to watch `main`.
 
-Verify: open the Actions tab → `CI` green on `main`; open the demo PR → review comment + `impl-review-ci/verdict` status present; `npx promptfoo eval` exits green; `lessons.md` shows 3 entries.
+Verify: open the Actions tab → `CI` green on `main`; open the demo PR → review comment + `ai-code-review/verdict` status present; `npx promptfoo eval` exits green; `lessons.md` shows 3 entries.
 
 ## What We're NOT Doing
 
