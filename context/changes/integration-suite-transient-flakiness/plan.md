@@ -327,9 +327,9 @@ None — test-infrastructure-only change, no data or schema impact.
 
 #### Automated
 
-- [x] 2.1 Linting passes (`npm run lint`)
-- [x] 2.2 Full suite passes locally against the local stack (`npx supabase start` + `npm test`)
-- [x] 2.3 Every PostgREST call in `fixtures.ts` and `cleanup.ts` routes through `withRetry` (grep-reviewed)
+- [x] 2.1 Linting passes (`npm run lint`) — 5cc7b91
+- [x] 2.2 Full suite passes locally against the local stack (`npx supabase start` + `npm test`) — 5cc7b91
+- [x] 2.3 Every PostgREST call in `fixtures.ts` and `cleanup.ts` routes through `withRetry` (grep-reviewed) — 5cc7b91
 
 #### Manual
 
