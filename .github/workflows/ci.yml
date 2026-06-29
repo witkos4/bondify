@@ -23,6 +23,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       - name: Start local Supabase stack
+        timeout-minutes: 5
         run: npx supabase start
       - name: Set Supabase test credentials
         run: |

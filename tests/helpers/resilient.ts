@@ -28,6 +28,9 @@ export async function withRetry<T>(
 
   let sawTransient = false;
 
+  // Note: op() exceptions are not caught here. The Supabase JS client encodes network
+  // errors as { data, error } rather than throwing, so catching throws would require a
+  // separate classification path without a PG error code to discriminate on.
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const result = await op();
     const error = result.error;
@@ -56,5 +59,6 @@ export async function withRetry<T>(
     return result;
   }
 
+  // unreachable — every loop iteration returns or continues; this throw satisfies the TypeScript type checker
   throw new Error(`withRetry exhausted for ${label}`);
 }

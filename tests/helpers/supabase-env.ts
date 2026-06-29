@@ -41,6 +41,9 @@ function buildPreflightMessage(reason: string) {
 }
 
 export function ensureLocalSupabaseTestEnv() {
+  // All-or-nothing: if ALL three BONDIFY_TEST_* vars are set, skip the local-stack probe entirely.
+  // If ANY is missing, we call `supabase status` and overwrite all three from its output.
+  // Partial pre-configuration (e.g. setting URL but not keys) is not supported — set all three or none.
   const missingTargetEnv = Object.values(REQUIRED_SUPABASE_ENV).some((name) => !process.env[name]);
   if (!missingTargetEnv) {
     return;

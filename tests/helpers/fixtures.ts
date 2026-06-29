@@ -74,10 +74,13 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+const PROFILE_POLL_ATTEMPTS = 20;
+const PROFILE_POLL_DELAY_MS = 250;
+
 async function waitForProfileRow(userId: string) {
   const admin = adminClient();
 
-  for (let attempt = 0; attempt < 10; attempt += 1) {
+  for (let attempt = 0; attempt < PROFILE_POLL_ATTEMPTS; attempt += 1) {
     const { data, error } = await withRetry(`verify mirrored profile row for ${userId}`, () =>
       admin.from("profiles").select("id, email, normalized_email").eq("id", userId).maybeSingle<ProfileRow>(),
     );
@@ -91,11 +94,13 @@ async function waitForProfileRow(userId: string) {
     }
 
     await new Promise((resolve) => {
-      setTimeout(resolve, 100);
+      setTimeout(resolve, PROFILE_POLL_DELAY_MS);
     });
   }
 
-  throw new Error(`Timed out waiting for mirrored profile row for ${userId}.`);
+  throw new Error(
+    `Timed out waiting for mirrored profile row for ${userId} after ${PROFILE_POLL_ATTEMPTS} attempts × ${PROFILE_POLL_DELAY_MS}ms.`,
+  );
 }
 
 async function requireTemplateBySlug(client: TestActor["client"], slug: string) {
@@ -160,6 +165,8 @@ export async function createTeamAs(user: TestUser, name: string, cleanup: Cleanu
     throw new Error(`Failed to create team ${name} as ${user.label}: ${createTeamError.message}`);
   }
 
+  cleanup.registerTeam(teamId);
+
   const { error: membershipError } = await withRetry(`create owner membership for ${name} as ${user.label}`, () =>
     user.client.from("team_memberships").insert({
       id: membershipId,
@@ -171,8 +178,6 @@ export async function createTeamAs(user: TestUser, name: string, cleanup: Cleanu
   if (membershipError) {
     throw new Error(`Failed to create owner membership for ${name} as ${user.label}: ${membershipError.message}`);
   }
-
-  cleanup.registerTeam(teamId);
 
   return {
     id: teamId,

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createCleanupRegistry } from "../helpers/cleanup";
 import { createTeamAs, openRoundAs } from "../helpers/fixtures";
@@ -26,7 +27,11 @@ describe("access grants", () => {
   });
 
   it("lets a member create a second team without regressing the creator membership helper", async () => {
-    const secondTeam = await createTeamAs(scenario.ownerA, "Bondify Test Team A Second", cleanup);
+    const secondTeam = await createTeamAs(
+      scenario.ownerA,
+      `Bondify Test Team A Second ${randomUUID().slice(0, 6)}`,
+      cleanup,
+    );
     const { data, error } = await scenario.ownerA.client
       .from("team_memberships")
       .select("id, team_id, profile_id")

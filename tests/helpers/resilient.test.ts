@@ -107,4 +107,11 @@ describe("withRetry", () => {
     await expect(withRetry("read template", op)).resolves.toBe(success);
     expect(op).toHaveBeenCalledTimes(1);
   });
+
+  it("throws synchronously when attempts is less than 1", async () => {
+    const op = vi.fn();
+
+    await expect(withRetry("invalid", op, 0)).rejects.toThrow("withRetry requires at least one attempt for invalid.");
+    expect(op).not.toHaveBeenCalled();
+  });
 });
