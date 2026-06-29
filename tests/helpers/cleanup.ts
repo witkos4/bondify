@@ -1,4 +1,5 @@
 import { adminClient } from "./clients";
+import { withRetry } from "./resilient";
 
 export interface CleanupRegistry {
   cleanup: () => Promise<void>;
@@ -23,7 +24,9 @@ export function createCleanupRegistry(): CleanupRegistry {
       const admin = adminClient();
 
       for (const teamId of [...teamIds].reverse()) {
-        const { error } = await admin.from("teams").delete().eq("id", teamId);
+        const { error } = await withRetry(`cleanup team ${teamId}`, () =>
+          admin.from("teams").delete().eq("id", teamId),
+        );
 
         if (error) {
           console.warn(`Cleanup warning while deleting team ${teamId}: ${error.message}`);

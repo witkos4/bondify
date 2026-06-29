@@ -314,22 +314,22 @@ None — test-infrastructure-only change, no data or schema impact.
 
 #### Automated
 
-- [x] 1.1 Type checking passes (`npm run lint` / `tsc --noEmit`)
-- [x] 1.2 Linting passes (`npm run lint`)
-- [x] 1.3 New unit test passes and rest stay green (`npm test`)
-- [x] 1.4 `resilient.test.ts` exercises all six cases (transient retry, exhaustion, 42501 no-retry, 23505 first-attempt surfaces, 23505-after-transient success, happy-path passthrough)
+- [x] 1.1 Type checking passes (`npm run lint` / `tsc --noEmit`) — af539cf
+- [x] 1.2 Linting passes (`npm run lint`) — af539cf
+- [x] 1.3 New unit test passes and rest stay green (`npm test`) — af539cf
+- [x] 1.4 `resilient.test.ts` exercises all six cases (transient retry, exhaustion, 42501 no-retry, 23505 first-attempt surfaces, 23505-after-transient success, happy-path passthrough) — af539cf
 
 #### Manual
 
-- [x] 1.5 Confirmed by reading `resilient.ts` that a first-attempt coded error can never be retried or coerced
+- [x] 1.5 Confirmed by reading `resilient.ts` that a first-attempt coded error can never be retried or coerced — af539cf
 
 ### Phase 2: Apply wrapper to fixtures + cleanup
 
 #### Automated
 
-- [ ] 2.1 Linting passes (`npm run lint`)
-- [ ] 2.2 Full suite passes locally against the local stack (`npx supabase start` + `npm test`)
-- [ ] 2.3 Every PostgREST call in `fixtures.ts` and `cleanup.ts` routes through `withRetry` (grep-reviewed)
+- [x] 2.1 Linting passes (`npm run lint`)
+- [x] 2.2 Full suite passes locally against the local stack (`npx supabase start` + `npm test`)
+- [x] 2.3 Every PostgREST call in `fixtures.ts` and `cleanup.ts` routes through `withRetry` (grep-reviewed)
 
 #### Manual
 
