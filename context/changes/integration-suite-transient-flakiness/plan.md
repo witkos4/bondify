@@ -286,6 +286,18 @@ confirmation (CI green) before considering the change complete.
 2. Push the branch; confirm the CI "Run unit + integration tests" step is green.
 3. Inspect CI logs for `Retrying ...` warnings (visibility check).
 
+## Verification Evidence
+
+- Local verification on 2026-06-29: `npm run lint`, `npx supabase start`, and
+  `npm test` passed against the implemented retry wrapper.
+- PR verification: draft PR #10
+  (`codex-integration-suite-transient-flakiness` -> `main`) ran GitHub Actions CI
+  successfully on final branch head `b80b27b`.
+- Final CI run `28399415545` passed all CI job steps, including the previously
+  failing "Run unit + integration tests" step.
+- CI log spot-check for `Retrying ...` and `Treating duplicate` returned no
+  matches, so no transient gateway retry was needed during that run.
+
 ## Performance Considerations
 
 Worst-case added latency per call is bounded (~100+200ms backoff before a 3rd
