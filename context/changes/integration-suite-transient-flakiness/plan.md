@@ -333,5 +333,5 @@ None — test-infrastructure-only change, no data or schema impact.
 
 #### Manual
 
-- [ ] 2.4 Green CI run — the previously failing "Run unit + integration tests" step passes
-- [ ] 2.5 CI logs spot-checked for `Retrying ...` warnings (wrapper wired / flake visibility)
+- [x] 2.4 Green CI run — the previously failing "Run unit + integration tests" step passes
+- [x] 2.5 CI logs spot-checked for `Retrying ...` warnings (wrapper wired / flake visibility)
