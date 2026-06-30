@@ -1,7 +1,7 @@
 ---
 change_id: testing-regression-guardrails
 title: Regression guardrails for Emoji Check-In UI and legacy membership schema
-status: verifying
+status: implemented
 created: 2026-06-16
 updated: 2026-06-30
 archived_at: null

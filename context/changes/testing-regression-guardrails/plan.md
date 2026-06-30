@@ -296,4 +296,4 @@ None — test-only change, no data or schema impact.
 #### Manual
 
 - [x] 2.4 Confirmed the failure message names the offending select and the seam helper
-- [ ] 2.5 Green CI run on the branch
+- [x] 2.5 Green CI run on the branch — c2276b0 / PR #12 (run 28479696176)
