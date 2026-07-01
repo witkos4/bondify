@@ -1,7 +1,7 @@
 ---
 change_id: testing-game-rule-integrity
 title: Testing game rule integrity
-status: preparing
+status: planned
 created: 2026-07-01
 updated: 2026-07-01
 archived_at: null
