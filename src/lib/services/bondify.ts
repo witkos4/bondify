@@ -2070,9 +2070,7 @@ export function createBondifyServices(context: ServiceContext) {
         return {
           team: toTeam(updatedRow),
           memberships: updatedRow.team_memberships.filter(isActiveMembership).map(toTeamRosterEntry),
-          pendingInvites: updatedRow.team_invites
-            .filter((invite) => invite.status === "pending")
-            .map(toTeamInviteView),
+          pendingInvites: updatedRow.team_invites.filter((invite) => invite.status === "pending").map(toTeamInviteView),
         };
       });
     },
