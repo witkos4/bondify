@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bondify S-10 Plan</title>
+    <style>
+      :root { color-scheme: dark; font-family: Georgia, serif; background: #07111f; color: #e8f1ff; }
+      body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 12% 8%, #17456b 0, transparent 35%), #07111f; }
+      main { max-width: 980px; margin: 0 auto; padding: 56px 24px 72px; }
+      .eyebrow { color: #75e2d0; letter-spacing: .18em; text-transform: uppercase; font: 700 12px/1.2 system-ui, sans-serif; }
+      h1 { font-size: clamp(36px, 5vw, 56px); line-height: 1.1; max-width: 100%; margin: 16px 0; overflow-wrap: anywhere; }
+      .lede { color: #b8c9dd; max-width: 680px; font: 18px/1.6 system-ui, sans-serif; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 38px; }
+      .card { border: 1px solid #2c526f; border-radius: 18px; padding: 20px; background: #0d2033cc; }
+      .card strong { display: block; color: #75e2d0; font: 700 13px system-ui, sans-serif; text-transform: uppercase; letter-spacing: .08em; }
+      .card p { margin: 10px 0 0; color: #d7e3f1; font: 15px/1.5 system-ui, sans-serif; }
+      .flow { margin-top: 38px; display: grid; gap: 10px; }
+      .step { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: center; gap: 16px; }
+      .num { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: #75e2d0; color: #07111f; font: 700 18px system-ui, sans-serif; }
+      .step div:last-child { border-left: 1px solid #2c526f; padding: 12px 16px; font: 15px/1.5 system-ui, sans-serif; }
+      .risk { margin-top: 38px; padding: 22px; border-radius: 18px; background: #3b2430; border: 1px solid #a95a75; font: 15px/1.5 system-ui, sans-serif; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">Bondify · S-10 · low complexity</div>
+      <h1>Owner-only team name editing</h1>
+      <p class="lede">Complete the missing Update leg of team CRUD with the existing Astro SSR, Supabase service, and management-page patterns.</p>
+      <section class="grid">
+        <article class="card"><strong>Input</strong><p>Trimmed team name, 1–80 characters.</p></article>
+        <article class="card"><strong>Guard</strong><p>Existing requireTeamOwnerAccess() before persistence.</p></article>
+        <article class="card"><strong>Feedback</strong><p>Redirect to management with typed flash state.</p></article>
+        <article class="card"><strong>Boundary</strong><p>Members see no form and direct POST is denied.</p></article>
+      </section>
+      <section class="flow">
+        <div class="step"><span class="num">1</span><div>Add updateTeam() and POST /api/teams/update.</div></div>
+        <div class="step"><span class="num">2</span><div>Render an owner-only inline form on /teams/&lt;teamId&gt;/manage.</div></div>
+        <div class="step"><span class="num">3</span><div>Verify owner success, member denial, validation, and one browser happy path.</div></div>
+      </section>
+      <div class="risk"><strong>Primary risk:</strong> an API path that updates the row without passing through the existing owner authorization boundary. The plan makes that boundary the first service contract and tests it directly.</div>
+    </main>
+  </body>
+</html>
