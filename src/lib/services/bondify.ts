@@ -2039,6 +2039,44 @@ export function createBondifyServices(context: ServiceContext) {
       });
     },
 
+    async updateTeam(input: { teamId: string; name: string }): Promise<TeamSummary> {
+      const name = input.name.trim();
+
+      if (!name || name.length > 80) {
+        throw new BondifyServiceError(
+          "INVALID_TEAM_NAME",
+          name ? "Team name is too long." : "Team name cannot be blank.",
+          { teamId: input.teamId },
+        );
+      }
+
+      return withCurrentProfile(async (supabase, profile) => {
+        await requireTeamOwnerAccess(supabase, { teamId: input.teamId, profileId: profile.id });
+
+        const { error } = await supabase.from("teams").update({ name }).eq("id", input.teamId);
+
+        if (error) {
+          throw new BondifyServiceError("TEAM_NOT_FOUND", error.message, { teamId: input.teamId });
+        }
+
+        const updatedRow = (await listTeamSummaryRows(supabase)).find((row) => row.id === input.teamId);
+
+        if (!updatedRow) {
+          throw new BondifyServiceError("TEAM_NOT_FOUND", "That team could not be updated.", {
+            teamId: input.teamId,
+          });
+        }
+
+        return {
+          team: toTeam(updatedRow),
+          memberships: updatedRow.team_memberships.filter(isActiveMembership).map(toTeamRosterEntry),
+          pendingInvites: updatedRow.team_invites
+            .filter((invite) => invite.status === "pending")
+            .map(toTeamInviteView),
+        };
+      });
+    },
+
     async createTeam(input: { name: string }): Promise<TeamSummary> {
       const name = input.name.trim();
       if (!name) {

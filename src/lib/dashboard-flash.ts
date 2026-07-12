@@ -20,6 +20,20 @@ type DashboardFlash =
       teamId?: string;
     }
   | {
+      type: "team-updated";
+      teamId: string;
+      teamName: string;
+      message: string;
+      surface?: TeamSurface;
+    }
+  | {
+      type: "team-update-error";
+      teamId: string;
+      teamName: string;
+      message: string;
+      surface?: TeamSurface;
+    }
+  | {
       type: "invite-results";
       teamId: string;
       submittedEmails: string[];
