@@ -199,38 +199,38 @@ No migration is required. The existing `teams.name` column, RLS policies, and ow
 
 #### Automated
 
-- [x] 1.1 `npm run lint` passes for service, flash types, and endpoint.
-- [x] 1.2 `npm run build` passes with the update route.
-- [x] 1.3 Owner update and member denial tests pass.
-- [x] 1.4 Invalid payloads fail closed without updating the team.
+- [x] 1.1 `npm run lint` passes for service, flash types, and endpoint. — 323abff
+- [x] 1.2 `npm run build` passes with the update route. — 323abff
+- [x] 1.3 Owner update and member denial tests pass. — 323abff
+- [x] 1.4 Invalid payloads fail closed without updating the team. — 323abff
 
 #### Manual
 
-- [x] 1.5 Direct non-owner POST cannot rename the team.
+- [x] 1.5 Direct non-owner POST cannot rename the team. — 323abff
 
 ### Phase 2: Inline Management UI
 
 #### Automated
 
-- [x] 2.1 `npm run lint` passes for the management page.
-- [x] 2.2 `npm run build` passes with owner/member conditional rendering.
-- [x] 2.3 Browser locators use accessible roles/labels and state-based waits.
+- [x] 2.1 `npm run lint` passes for the management page. — 323abff
+- [x] 2.2 `npm run build` passes with owner/member conditional rendering. — 323abff
+- [x] 2.3 Browser locators use accessible roles/labels and state-based waits. — 323abff
 
 #### Manual
 
-- [x] 2.4 Owner can rename and sees the updated name after redirect.
-- [x] 2.5 Member does not see the rename form.
-- [x] 2.6 Invalid input preserves the value and shows an error.
+- [x] 2.4 Owner can rename and sees the updated name after redirect. — 323abff
+- [x] 2.5 Member does not see the rename form. — 323abff
+- [x] 2.6 Invalid input preserves the value and shows an error. — 323abff
 
 ### Phase 3: Focused Verification
 
 #### Automated
 
-- [x] 3.1 Focused service/API tests pass.
-- [x] 3.2 `npx playwright test tests/browser/team-name-editing.spec.ts` passes with local services.
-- [x] 3.3 Final `npm run lint` and `npm run build` pass.
+- [x] 3.1 Focused service/API tests pass. — 323abff
+- [x] 3.2 `npx playwright test tests/browser/team-name-editing.spec.ts` passes with local services. — 323abff
+- [x] 3.3 Final `npm run lint` and `npm run build` pass. — 323abff
 
 #### Manual
 
-- [x] 3.4 Owner flow is usable at desktop and mobile widths.
-- [x] 3.5 Member-facing management behavior has no unrelated regressions.
+- [x] 3.4 Owner flow is usable at desktop and mobile widths. — 323abff
+- [x] 3.5 Member-facing management behavior has no unrelated regressions. — 323abff
