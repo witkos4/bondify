@@ -42,6 +42,10 @@ const inviteAcceptErrorFlash =
 const teamCreatedFlash =
   dashboardFlash?.type === "team-created" && dashboardFlash.teamId === decodedTeamId ? dashboardFlash : null;
 const teamCreateErrorFlash = dashboardFlash?.type === "team-create-error" ? dashboardFlash : null;
+const teamUpdatedFlash =
+  dashboardFlash?.type === "team-updated" && dashboardFlash.teamId === decodedTeamId ? dashboardFlash : null;
+const teamUpdateErrorFlash =
+  dashboardFlash?.type === "team-update-error" && dashboardFlash.teamId === decodedTeamId ? dashboardFlash : null;
 const teamMemberRemovedFlash =
   dashboardFlash?.type === "team-member-removed" && dashboardFlash.teamId === decodedTeamId ? dashboardFlash : null;
 const teamMemberRemoveErrorFlash =
@@ -149,6 +153,64 @@ function formatMembershipDate(value: string) {
                   </div>
                 </div>
               </section>
+
+              {managementState.canManageTeam && (
+                <section
+                  id="edit-team-name"
+                  class="rounded-[2rem] border border-cyan-300/20 bg-cyan-950/20 p-6 text-white shadow-xl shadow-black/20 backdrop-blur-xl sm:p-8"
+                >
+                  <div class="max-w-2xl">
+                    <p class="text-xs font-semibold tracking-[0.25em] text-cyan-200/65 uppercase">Team identity</p>
+                    <h2 class="mt-2 text-2xl font-semibold">Keep the team name current</h2>
+                    <p class="mt-3 text-sm leading-6 text-blue-100/65">
+                      Rename this team without leaving management. The name is shared across the team switcher and team
+                      surfaces.
+                    </p>
+                  </div>
+
+                  {teamUpdatedFlash && (
+                    <div class="mt-5 rounded-3xl border border-emerald-300/25 bg-emerald-300/10 p-4 text-sm leading-6 text-emerald-100">
+                      {teamUpdatedFlash.message}
+                    </div>
+                  )}
+
+                  {teamUpdateErrorFlash && (
+                    <div class="mt-5 rounded-3xl border border-red-500/30 bg-red-900/40 p-4 text-sm leading-6 text-red-300">
+                      {teamUpdateErrorFlash.message}
+                    </div>
+                  )}
+
+                  <form
+                    method="POST"
+                    action="/api/teams/update"
+                    aria-label="Edit team name"
+                    class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end"
+                  >
+                    <input type="hidden" name="teamId" value={managementState.team.id} />
+                    <input type="hidden" name="surface" value="management" />
+                    <div class="min-w-0 flex-1">
+                      <label class="block text-sm font-medium text-blue-100/75" for="edit-team-name-input">
+                        Team name
+                      </label>
+                      <input
+                        id="edit-team-name-input"
+                        name="teamName"
+                        type="text"
+                        value={teamUpdateErrorFlash?.teamName ?? managementState.team.name}
+                        maxlength="80"
+                        required
+                        class="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-white transition outline-none focus:border-cyan-300/70"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      class="rounded-2xl border border-cyan-300/25 bg-cyan-400/90 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                    >
+                      Save team name
+                    </button>
+                  </form>
+                </section>
+              )}
 
               <section
                 id="incoming-invites"

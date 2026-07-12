@@ -1,17 +1,20 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createCleanupRegistry } from "../helpers/cleanup";
-import { setupTwoTeamScenario } from "../helpers/scenario";
+import { setupTwoTeamScenario, type TwoTeamScenario } from "../helpers/scenario";
 
 describe("fixture harness", () => {
   const cleanup = createCleanupRegistry();
+  let scenario: TwoTeamScenario;
+
+  beforeAll(async () => {
+    scenario = await setupTwoTeamScenario(cleanup);
+  });
 
   afterAll(async () => {
     await cleanup.cleanup();
   });
 
   it("builds the standard two-team scenario through real RLS paths", async () => {
-    const scenario = await setupTwoTeamScenario(cleanup);
-
     expect(new Set([scenario.ownerA.userId, scenario.memberA2.userId, scenario.outsiderB.userId]).size).toBe(3);
     expect(new Set([scenario.teamA.id, scenario.teamB.id]).size).toBe(2);
 

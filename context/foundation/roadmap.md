@@ -33,6 +33,7 @@ The main product bet in this revision is that a cleaner member-first shell plus 
 | S-07 | daily-emoji-check-in-loop | User can enter today's Emoji Check-In, submit emoji-only reactions once, see the reveal, and compare the last 30 days. | S-06 | US-02 | implemented |
 | S-08 | team-management-page-separation | User can leave the member-first games overview and reach team-management actions on their own dedicated page. | S-06 | US-01 | implemented |
 | S-09 | two-truths-structured-round | User can join a structured Two Truths and a Lie round with teammate voting and no self-guessing. | S-06 | US-03 | implemented |
+| S-10 | team-name-editing | Team owner can rename a team from team management, while non-owners are denied. | S-08 | US-01 | proposed |
 
 ## Streams
 
@@ -43,6 +44,7 @@ Navigation aid - groups items that share a Prerequisites chain. Canonical orderi
 | A | Member entry and daily ritual | `S-06` -> `S-07` | This is the must-have path for the speed-biased roadmap because it proves the revised member flow in daily use. |
 | B | Team management separation | `S-08` | Depends on `S-06`, but stays separate so the member-first shell can land before owner-facing cleanup expands. |
 | C | Second game redesign | `S-09` | Depends on `S-06` and stays blocked until the open game-rule decisions are answered. |
+| D | Team management completeness | `S-08` -> `S-10` | Closes the missing Update operation in the team-management CRUD surface without changing the role model. |
 
 ## Baseline
 
@@ -115,6 +117,18 @@ No dedicated foundations are required for this roadmap. The brownfield baseline 
 - **Status:** implemented
 - **2026-06-12 verification note:** The structured round is implemented and the core flow was included in the manual slice sweep after the planning decisions were locked.
 
+### S-10: Team name editing
+
+- **Outcome:** Team owner can rename a team from team management, while non-owners are denied.
+- **Change ID:** team-name-editing
+- **PRD refs:** US-01
+- **Prerequisites:** S-08
+- **Parallel with:** -
+- **Blockers:** -
+- **Unknowns:** -
+- **Risk:** This is intentionally narrow: it completes the missing Update leg of team CRUD while preserving the existing owner/member access model and avoiding a wider team-management redesign.
+- **Status:** proposed
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID | Suggested issue title | Ready for `/10x-plan` | Notes |
@@ -123,6 +137,7 @@ No dedicated foundations are required for this roadmap. The brownfield baseline 
 | S-07 | daily-emoji-check-in-loop | Daily Emoji Check-In with emoji-only input, reveal, and 30-day timeline | no | Wait for `S-06`, then plan immediately as the north star slice. |
 | S-08 | team-management-page-separation | Separate team-management page while keeping member overview focused | no | Wait for `S-06`; can run after or alongside `S-07`. |
 | S-09 | two-truths-structured-round | Structured Two Truths and a Lie multiplayer round | no | Resolve the open game-rule decisions first. |
+| S-10 | team-name-editing | Owner-only team rename from team management | yes | Small follow-up to complete team CRUD; verify owner access and member denial. |
 
 ## Open Roadmap Questions
 

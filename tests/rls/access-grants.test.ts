@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createCleanupRegistry } from "../helpers/cleanup";
 import { createTeamAs, openRoundAs } from "../helpers/fixtures";
@@ -26,7 +27,11 @@ describe("access grants", () => {
   });
 
   it("lets a member create a second team without regressing the creator membership helper", async () => {
-    const secondTeam = await createTeamAs(scenario.ownerA, "Bondify Test Team A Second", cleanup);
+    const secondTeam = await createTeamAs(
+      scenario.ownerA,
+      `Bondify Test Team A Second ${randomUUID().slice(0, 6)}`,
+      cleanup,
+    );
     const { data, error } = await scenario.ownerA.client
       .from("team_memberships")
       .select("id, team_id, profile_id")
@@ -36,6 +41,40 @@ describe("access grants", () => {
     expect(error).toBeNull();
     expect(data?.team_id).toBe(secondTeam.id);
     expect(data?.profile_id).toBe(scenario.ownerA.userId);
+  });
+
+  it("lets the owner rename a team while filtering member updates", async () => {
+    const ownerName = `Bondify Renamed Team ${randomUUID().slice(0, 6)}`;
+    const memberName = `Bondify Member Attempt ${randomUUID().slice(0, 6)}`;
+
+    const { data: ownerUpdate, error: ownerUpdateError } = await scenario.ownerA.client
+      .from("teams")
+      .update({ name: ownerName })
+      .eq("id", scenario.teamA.id)
+      .select("id, name")
+      .single<{ id: string; name: string }>();
+
+    expect(ownerUpdateError).toBeNull();
+    expect(ownerUpdate?.name).toBe(ownerName);
+
+    const { data: memberUpdate, error: memberUpdateError } = await scenario.memberA2.client
+      .from("teams")
+      .update({ name: memberName })
+      .eq("id", scenario.teamA.id)
+      .select("id, name")
+      .maybeSingle<{ id: string; name: string }>();
+
+    expect(memberUpdateError).toBeNull();
+    expect(memberUpdate).toBeNull();
+
+    const { data: persistedTeam, error: persistedTeamError } = await scenario.ownerA.client
+      .from("teams")
+      .select("name")
+      .eq("id", scenario.teamA.id)
+      .single<{ name: string }>();
+
+    expect(persistedTeamError).toBeNull();
+    expect(persistedTeam?.name).toBe(ownerName);
   });
 
   it("grants team visibility after a real invite acceptance flow", async () => {

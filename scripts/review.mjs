@@ -132,7 +132,8 @@ async function callOpenRouter(prompt) {
   });
 
   if (!response.ok) {
-    throw new Error(`OpenRouter request failed: ${response.status} ${await response.text()}`);
+    const errBody = (await response.text()).slice(0, 500);
+    throw new Error(`OpenRouter request failed: ${response.status} ${errBody}`);
   }
 
   const data = await response.json();
@@ -180,7 +181,7 @@ function postComment({ body, prNumber }) {
 
   const result = spawnSync("gh", ["pr", "comment", prNumber, "--body-file", bodyFile], {
     encoding: "utf8",
-    env: { ...process.env, GH_TOKEN: token },
+    env: { GH_TOKEN: token, PATH: process.env.PATH, HOME: process.env.HOME },
   });
 
   if (result.status !== 0) {
@@ -214,8 +215,13 @@ async function main() {
     throw new Error("A PR diff is required via REVIEW_DIFF_FILE, PR_DIFF, --diff-file, or --diff.");
   }
 
+  const cappedTitle = title.slice(0, 500);
+  const cappedBody = (body ?? "").slice(0, 2_000);
+  const cappedDiff =
+    diff.length > 100_000 ? diff.slice(0, 100_000) + "\n[... diff truncated at 100 000 bytes ...]" : diff;
+
   const template = readFileSync(new URL("../prompts/review.txt", import.meta.url), "utf8");
-  const prompt = renderPrompt(template, { title, body, diff });
+  const prompt = renderPrompt(template, { title: cappedTitle, body: cappedBody, diff: cappedDiff });
   const rawResponse = await callOpenRouter(prompt);
   const result = validateVerdict(parseJsonFromText(rawResponse));
   const comment = formatComment(result);

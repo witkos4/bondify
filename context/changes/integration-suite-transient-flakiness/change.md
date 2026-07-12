@@ -1,7 +1,7 @@
 ---
 change_id: integration-suite-transient-flakiness
 title: RLS integration suite has no resilience to transient local-Supabase gateway errors
-status: implemented
+status: impl_reviewed
 created: 2026-06-29
 updated: 2026-06-29
 archived_at: null

@@ -375,6 +375,110 @@ function createAlreadyMemberCompatibilitySupabaseMock() {
   return { supabase, teamId };
 }
 
+function createResolvedListQuery(result: { data: unknown[]; error: null }) {
+  // game_rounds ends in `.order().order()` and emoji_check_in_sessions ends in
+  // `.order().limit()`. Rather than guess which call is terminal, make the
+  // builder itself thenable: every chain method returns the builder, and
+  // awaiting the builder at any point resolves the query result.
+  const builder: Record<string, unknown> = {
+    then: (resolve: (value: { data: unknown[]; error: null }) => unknown) => resolve(result),
+  };
+  const chain = () => builder;
+
+  for (const method of ["select", "eq", "is", "not", "gte", "order", "limit"]) {
+    builder[method] = vi.fn(chain);
+  }
+
+  return builder;
+}
+
+function createReadGateCompatibilitySupabaseMock() {
+  const teamId = "team-read-gate";
+  const membershipSelections: string[] = [];
+
+  const supabase = {
+    auth: {
+      getUser: vi.fn().mockResolvedValue({
+        data: {
+          user: {
+            id: baseProfileRow.id,
+            email: baseProfileRow.email,
+          },
+        },
+      }),
+    },
+    from(table: string) {
+      if (table === "profiles") {
+        return createProfilesBuilder();
+      }
+
+      if (table === "team_memberships") {
+        return {
+          select: vi.fn().mockImplementation((selection: string) => {
+            membershipSelections.push(selection);
+
+            const builder = {
+              eq: vi.fn(() => builder),
+              is: vi.fn(() => builder),
+              maybeSingle: vi.fn().mockImplementation(() => {
+                if (selection.includes("removed_at")) {
+                  return Promise.resolve({
+                    data: null,
+                    error: {
+                      message: "column team_memberships.removed_at does not exist",
+                    },
+                  });
+                }
+
+                return Promise.resolve({
+                  data: {
+                    id: "membership-read-gate",
+                    team_id: teamId,
+                    profile_id: baseProfileRow.id,
+                    created_at: "2026-06-16T08:00:00.000Z",
+                  },
+                  error: null,
+                });
+              }),
+            };
+
+            return builder;
+          }),
+        };
+      }
+
+      if (table === "teams") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: {
+                  id: teamId,
+                  name: "Read-gate Team",
+                  created_by: baseProfileRow.id,
+                  created_at: "2026-06-16T08:00:00.000Z",
+                  updated_at: "2026-06-16T08:00:00.000Z",
+                },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+
+      if (table === "game_rounds" || table === "emoji_check_in_sessions") {
+        return {
+          select: vi.fn().mockReturnValue(createResolvedListQuery({ data: [], error: null })),
+        };
+      }
+
+      throw new Error(`Unexpected table: ${table}`);
+    },
+  };
+
+  return { supabase, teamId, membershipSelections };
+}
+
 describe("createBondifyServices compatibility", () => {
   beforeEach(() => {
     createClientMock.mockReset();
@@ -440,5 +544,24 @@ describe("createBondifyServices compatibility", () => {
       ok: false,
       errorCode: "ALREADY_TEAM_MEMBER",
     });
+  });
+
+  it("grants a member team-scoped read access when the read-gate must fall back to the legacy schema", async () => {
+    const { supabase, teamId, membershipSelections } = createReadGateCompatibilitySupabaseMock();
+    createClientMock.mockReturnValue(supabase);
+
+    const services = createBondifyServices(createServiceContext());
+    const state = await services.getTeamHistoryState(teamId);
+
+    // Member granted: getTeamHistoryState resolves with the team-scoped state
+    // instead of throwing TEAM_ACCESS_DENIED.
+    expect(state.team.id).toBe(teamId);
+    expect(state.team.name).toBe("Read-gate Team");
+
+    // The read-gate attempted the active (removed_at) select before falling
+    // back to the legacy select.
+    expect(membershipSelections).toHaveLength(2);
+    expect(membershipSelections[0]).toContain("removed_at");
+    expect(membershipSelections[1]).not.toContain("removed_at");
   });
 });
